@@ -1,0 +1,2787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Life Fragments</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Barlow:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            heading: ["'Instrument Serif'", "serif"],
+            body: ["'Barlow'", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "9999px",
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    html, body { background: #000; margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
+    #root { height: 100%; }
+    .liquid-glass {
+      background: rgba(255,255,255,0.01);
+      background-blend-mode: luminosity;
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      border: none;
+      box-shadow: inset 0 1px 1px rgba(255,255,255,0.1);
+      position: relative;
+      overflow: hidden;
+    }
+    .liquid-glass::before {
+      content: "";
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      padding: 1.4px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0.45) 0%,
+        rgba(255,255,255,0.15) 20%,
+        rgba(255,255,255,0) 40%,
+        rgba(255,255,255,0) 60%,
+        rgba(255,255,255,0.15) 80%,
+        rgba(255,255,255,0.45) 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .liquid-glass-strong {
+      background: rgba(255,255,255,0.01);
+      background-blend-mode: luminosity;
+      backdrop-filter: blur(50px);
+      -webkit-backdrop-filter: blur(50px);
+      border: none;
+      box-shadow: 4px 4px 4px rgba(0,0,0,0.05), inset 0 1px 1px rgba(255,255,255,0.15);
+      position: relative;
+      overflow: hidden;
+    }
+    .liquid-glass-strong::before {
+      content: "";
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      padding: 1.4px;
+      background: linear-gradient(180deg,
+        rgba(255,255,255,0.5) 0%,
+        rgba(255,255,255,0.2) 20%,
+        rgba(255,255,255,0) 40%,
+        rgba(255,255,255,0) 60%,
+        rgba(255,255,255,0.2) 80%,
+        rgba(255,255,255,0.5) 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .magic-rings-container {
+      width: 100%;
+      height: 100%;
+    }
+    .magic-rings-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      mix-blend-mode: screen;
+    }
+    .profile-shell {
+      position: relative;
+      width: 100%;
+      max-width: 28rem;
+      padding: 1px;
+      border-radius: 1.75rem;
+      background: linear-gradient(145deg, rgba(210, 190, 155, 0.5), rgba(150, 175, 205, 0.35));
+      box-shadow: 0 0 36px rgba(210, 190, 155, 0.12), 0 0 48px rgba(150, 175, 205, 0.08);
+    }
+    .profile-card {
+      border-radius: 1.7rem;
+      overflow: visible;
+    }
+    .profile-avatar-ring {
+      background: linear-gradient(145deg, rgba(235, 215, 175, 0.85), rgba(175, 200, 225, 0.7));
+      padding: 3px;
+    }
+    .profile-field-readonly {
+      color: rgba(255,255,255,0.55);
+      cursor: not-allowed;
+    }
+    .writings-shell {
+      position: relative;
+      width: 100%;
+      max-width: 42rem;
+      padding: 1px;
+      border-radius: 1.75rem;
+      background: linear-gradient(145deg, rgba(210, 190, 155, 0.5), rgba(150, 175, 205, 0.35));
+      box-shadow: 0 0 36px rgba(210, 190, 155, 0.12), 0 0 48px rgba(150, 175, 205, 0.08);
+    }
+    .writings-card {
+      border-radius: 1.7rem;
+    }
+    .mood-chip {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .mood-chip:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+    .mood-chip-active {
+      background: rgba(242, 228, 184, 0.14);
+      border-color: rgba(184, 216, 245, 0.55);
+      box-shadow: 0 0 12px rgba(242, 228, 184, 0.2), 0 0 16px rgba(184, 216, 245, 0.12);
+    }
+    .comment-panel {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .comment-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+      color: #fff;
+      resize: none;
+      min-height: 2.25rem;
+    }
+    .comment-input:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+    .comment-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
+    .writings-textarea {
+      width: 100%;
+      min-height: 7.5rem;
+      resize: none;
+      background: transparent;
+      color: rgba(255, 255, 255, 0.92);
+      border: 0;
+      outline: none;
+    }
+    .writings-textarea::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js"></script>
+  <script>if (window.FramerMotion) window.Motion = window.FramerMotion;</script>
+  <script src="https://unpkg.com/three@0.170.0/build/three.min.js"></script>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+    const { motion } = Motion;
+
+    const _error = console.error;
+    console.error = (...args) => {
+      if (typeof args[0] === "string" && args[0].includes("unique \"key\" prop")) return;
+      _error.apply(console, args);
+    };
+
+    const FADE_MS = 500;
+    const FADE_OUT_LEAD = 0.55;
+
+    function FadingVideo({ src, className, style }) {
+      const videoRef = useRef(null);
+      const rafRef = useRef(null);
+      const fadingOutRef = useRef(false);
+
+      const fadeTo = useCallback((target, duration) => {
+        const video = videoRef.current;
+        if (!video) return;
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        const startOpacity = parseFloat(video.style.opacity) || 0;
+        const startTime = performance.now();
+        const animate = (now) => {
+          const elapsed = now - startTime;
+          const t = Math.min(elapsed / duration, 1);
+          video.style.opacity = startOpacity + (target - startOpacity) * t;
+          if (t < 1) {
+            rafRef.current = requestAnimationFrame(animate);
+          } else {
+            rafRef.current = null;
+          }
+        };
+        rafRef.current = requestAnimationFrame(animate);
+      }, []);
+
+      useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const onLoadedData = () => {
+          video.style.opacity = "0";
+          video.play().catch(() => {});
+          fadeTo(1, FADE_MS);
+        };
+
+        const onTimeUpdate = () => {
+          const remaining = video.duration - video.currentTime;
+          if (!fadingOutRef.current && remaining <= FADE_OUT_LEAD && remaining > 0) {
+            fadingOutRef.current = true;
+            fadeTo(0, FADE_MS);
+          }
+        };
+
+        const onEnded = () => {
+          video.style.opacity = "0";
+          setTimeout(() => {
+            video.currentTime = 0;
+            video.play().catch(() => {});
+            fadingOutRef.current = false;
+            fadeTo(1, FADE_MS);
+          }, 100);
+        };
+
+        video.addEventListener("loadeddata", onLoadedData);
+        video.addEventListener("timeupdate", onTimeUpdate);
+        video.addEventListener("ended", onEnded);
+
+        if (video.readyState >= 2) onLoadedData();
+
+        return () => {
+          if (rafRef.current) cancelAnimationFrame(rafRef.current);
+          video.removeEventListener("loadeddata", onLoadedData);
+          video.removeEventListener("timeupdate", onTimeUpdate);
+          video.removeEventListener("ended", onEnded);
+        };
+      }, [fadeTo]);
+
+      return (
+        <video
+          ref={videoRef}
+          src={src}
+          autoPlay
+          muted
+          playsInline
+          preload="auto"
+          className={className}
+          style={{ ...style, opacity: 0 }}
+        />
+      );
+    }
+    window.FadingVideo = FadingVideo;
+
+    const MAGIC_RINGS_PROPS = {
+      color: "#F2E4B8",
+      colorTwo: "#B8D8F5",
+      ringCount: 6,
+      speed: 0.85,
+      attenuation: 7.5,
+      lineThickness: 2.5,
+      baseRadius: 0.32,
+      radiusStep: 0.11,
+      scaleRate: 0.1,
+      opacity: 0.78,
+      blur: 3,
+      noiseAmount: 0.04,
+      rotation: 12,
+      ringGap: 1.5,
+      fadeIn: 0.7,
+      fadeOut: 0.5,
+      followMouse: true,
+      mouseInfluence: 0.12,
+      hoverScale: 1.15,
+      parallax: 0.05,
+      clickBurst: false,
+    };
+
+    const vertexShader = `
+void main() {
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}
+`;
+
+    const fragmentShader = `
+precision highp float;
+
+uniform float uTime, uAttenuation, uLineThickness;
+uniform float uBaseRadius, uRadiusStep, uScaleRate;
+uniform float uOpacity, uNoiseAmount, uRotation, uRingGap;
+uniform float uFadeIn, uFadeOut;
+uniform float uMouseInfluence, uHoverAmount, uHoverScale, uParallax, uBurst;
+uniform vec2 uResolution, uMouse;
+uniform vec3 uColor, uColorTwo;
+uniform int uRingCount;
+
+const float HP = 1.5707963;
+const float CYCLE = 3.45;
+
+float fade(float t) {
+  return t < uFadeIn ? smoothstep(0.0, uFadeIn, t) : 1.0 - smoothstep(uFadeOut, CYCLE - 0.2, t);
+}
+
+float ring(vec2 p, float ri, float cut, float t0, float px) {
+  float t = mod(uTime + t0, CYCLE);
+  float r = ri + t / CYCLE * uScaleRate;
+  float d = abs(length(p) - r);
+  float a = atan(abs(p.y), abs(p.x)) / HP;
+  float th = max(1.0 - a, 0.5) * px * uLineThickness;
+  float h = (1.0 - smoothstep(th, th * 1.5, d)) + 1.0;
+  d += pow(cut * a, 3.0) * r;
+  return h * exp(-uAttenuation * d) * fade(t);
+}
+
+void main() {
+  float px = 1.0 / min(uResolution.x, uResolution.y);
+  vec2 p = (gl_FragCoord.xy - 0.5 * uResolution.xy) * px;
+  float cr = cos(uRotation), sr = sin(uRotation);
+  p = mat2(cr, -sr, sr, cr) * p;
+  p -= uMouse * uMouseInfluence;
+  float sc = mix(1.0, uHoverScale, uHoverAmount) + uBurst * 0.3;
+  p /= sc;
+  vec3 c = vec3(0.0);
+  float rcf = max(float(uRingCount) - 1.0, 1.0);
+  for (int i = 0; i < 10; i++) {
+    if (i >= uRingCount) break;
+    float fi = float(i);
+    vec2 pr = p - fi * uParallax * uMouse;
+    vec3 rc = mix(uColor, uColorTwo, fi / rcf);
+    c = mix(c, rc, vec3(ring(pr, uBaseRadius + fi * uRadiusStep, pow(uRingGap, fi), i == 0 ? 0.0 : 2.95 * fi, px)));
+  }
+  c *= 1.0 + uBurst * 2.0;
+  float n = fract(sin(dot(gl_FragCoord.xy + uTime * 100.0, vec2(12.9898, 78.233))) * 43758.5453);
+  c += (n - 0.5) * uNoiseAmount;
+  gl_FragColor = vec4(c, max(c.r, max(c.g, c.b)) * uOpacity);
+}
+`;
+
+    function MagicRings(props) {
+      const {
+        color = "#C8B89A",
+        colorTwo = "#8FA4C4",
+        speed = 1,
+        ringCount = 6,
+        attenuation = 10,
+        lineThickness = 2,
+        baseRadius = 0.35,
+        radiusStep = 0.1,
+        scaleRate = 0.1,
+        opacity = 1,
+        blur = 0,
+        noiseAmount = 0.1,
+        rotation = 0,
+        ringGap = 1.5,
+        fadeIn = 0.7,
+        fadeOut = 0.5,
+        followMouse = false,
+        mouseInfluence = 0.2,
+        hoverScale = 1.2,
+        parallax = 0.05,
+        clickBurst = false,
+      } = props;
+
+      const mountRef = useRef(null);
+      const propsRef = useRef(null);
+      const mouseRef = useRef([0, 0]);
+      const smoothMouseRef = useRef([0, 0]);
+      const hoverAmountRef = useRef(0);
+      const isHoveredRef = useRef(false);
+      const burstRef = useRef(0);
+
+      propsRef.current = {
+        color, colorTwo, speed, ringCount, attenuation, lineThickness,
+        baseRadius, radiusStep, scaleRate, opacity, noiseAmount,
+        rotation, ringGap, fadeIn, fadeOut, followMouse, mouseInfluence,
+        hoverScale, parallax, clickBurst,
+      };
+
+      useEffect(() => {
+        const mount = mountRef.current;
+        const THREE = window.THREE;
+        if (!mount || !THREE) return;
+
+        let renderer;
+        try {
+          renderer = new THREE.WebGLRenderer({ alpha: true });
+        } catch {
+          return;
+        }
+
+        if (!renderer.capabilities.isWebGL2) {
+          renderer.dispose();
+          return;
+        }
+
+        renderer.setClearColor(0x000000, 0);
+        mount.appendChild(renderer.domElement);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0.1, 10);
+        camera.position.z = 1;
+
+        const uniforms = {
+          uTime: { value: 0 },
+          uAttenuation: { value: 0 },
+          uResolution: { value: new THREE.Vector2() },
+          uColor: { value: new THREE.Color() },
+          uColorTwo: { value: new THREE.Color() },
+          uLineThickness: { value: 0 },
+          uBaseRadius: { value: 0 },
+          uRadiusStep: { value: 0 },
+          uScaleRate: { value: 0 },
+          uRingCount: { value: 0 },
+          uOpacity: { value: 1 },
+          uNoiseAmount: { value: 0 },
+          uRotation: { value: 0 },
+          uRingGap: { value: 1.6 },
+          uFadeIn: { value: 0.5 },
+          uFadeOut: { value: 0.75 },
+          uMouse: { value: new THREE.Vector2() },
+          uMouseInfluence: { value: 0 },
+          uHoverAmount: { value: 0 },
+          uHoverScale: { value: 1 },
+          uParallax: { value: 0 },
+          uBurst: { value: 0 },
+        };
+
+        const material = new THREE.ShaderMaterial({
+          vertexShader,
+          fragmentShader,
+          uniforms,
+          transparent: true,
+        });
+        const quad = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
+        scene.add(quad);
+
+        const resize = () => {
+          const w = mount.clientWidth;
+          const h = mount.clientHeight;
+          const dpr = Math.min(window.devicePixelRatio, 2);
+          renderer.setSize(w, h);
+          renderer.setPixelRatio(dpr);
+          uniforms.uResolution.value.set(w * dpr, h * dpr);
+        };
+        resize();
+        window.addEventListener("resize", resize);
+
+        const ro = new ResizeObserver(resize);
+        ro.observe(mount);
+
+        const onMouseMove = (e) => {
+          const rect = mount.getBoundingClientRect();
+          const inside =
+            e.clientX >= rect.left &&
+            e.clientX <= rect.right &&
+            e.clientY >= rect.top &&
+            e.clientY <= rect.bottom;
+          isHoveredRef.current = inside;
+          if (!inside) {
+            mouseRef.current[0] = 0;
+            mouseRef.current[1] = 0;
+            return;
+          }
+          mouseRef.current[0] = (e.clientX - rect.left) / rect.width - 0.5;
+          mouseRef.current[1] = -((e.clientY - rect.top) / rect.height - 0.5);
+        };
+        const onClick = () => { burstRef.current = 1; };
+
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("click", onClick);
+
+        let frameId;
+        const animate = (t) => {
+          frameId = requestAnimationFrame(animate);
+          const p = propsRef.current;
+
+          smoothMouseRef.current[0] += (mouseRef.current[0] - smoothMouseRef.current[0]) * 0.08;
+          smoothMouseRef.current[1] += (mouseRef.current[1] - smoothMouseRef.current[1]) * 0.08;
+          hoverAmountRef.current += ((isHoveredRef.current ? 1 : 0) - hoverAmountRef.current) * 0.08;
+          burstRef.current *= 0.95;
+          if (burstRef.current < 0.001) burstRef.current = 0;
+
+          uniforms.uTime.value = t * 0.001 * p.speed;
+          uniforms.uAttenuation.value = p.attenuation;
+          uniforms.uColor.value.set(p.color);
+          uniforms.uColorTwo.value.set(p.colorTwo);
+          uniforms.uLineThickness.value = p.lineThickness;
+          uniforms.uBaseRadius.value = p.baseRadius;
+          uniforms.uRadiusStep.value = p.radiusStep;
+          uniforms.uScaleRate.value = p.scaleRate;
+          uniforms.uRingCount.value = p.ringCount;
+          uniforms.uOpacity.value = p.opacity;
+          uniforms.uNoiseAmount.value = p.noiseAmount;
+          uniforms.uRotation.value = (p.rotation * Math.PI) / 180;
+          uniforms.uRingGap.value = p.ringGap;
+          uniforms.uFadeIn.value = p.fadeIn;
+          uniforms.uFadeOut.value = p.fadeOut;
+          uniforms.uMouse.value.set(smoothMouseRef.current[0], smoothMouseRef.current[1]);
+          uniforms.uMouseInfluence.value = p.followMouse ? p.mouseInfluence : 0;
+          uniforms.uHoverAmount.value = hoverAmountRef.current;
+          uniforms.uHoverScale.value = p.hoverScale;
+          uniforms.uParallax.value = p.parallax;
+          uniforms.uBurst.value = p.clickBurst ? burstRef.current : 0;
+
+          renderer.render(scene, camera);
+        };
+        frameId = requestAnimationFrame(animate);
+
+        return () => {
+          cancelAnimationFrame(frameId);
+          window.removeEventListener("resize", resize);
+          ro.disconnect();
+          window.removeEventListener("mousemove", onMouseMove);
+          window.removeEventListener("click", onClick);
+          if (renderer.domElement.parentNode === mount) {
+            mount.removeChild(renderer.domElement);
+          }
+          renderer.dispose();
+          material.dispose();
+        };
+      }, []);
+
+      return (
+        <div
+          ref={mountRef}
+          className="magic-rings-container"
+          style={blur > 0 ? { filter: `blur(${blur}px)` } : undefined}
+        />
+      );
+    }
+    window.MagicRings = MagicRings;
+    window.MAGIC_RINGS_PROPS = MAGIC_RINGS_PROPS;
+  </script>
+
+  <script type="text/babel">
+    function ArrowUpRight({ className = "h-5 w-5" }) {
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M7 17L17 7" />
+          <path d="M7 7h10v10" />
+        </svg>
+      );
+    }
+
+    function Play({ className = "h-4 w-4" }) {
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="6 4 20 12 6 20 6 4" />
+        </svg>
+      );
+    }
+    window.ArrowUpRight = ArrowUpRight;
+    window.Play = Play;
+  </script>
+
+  <script type="text/babel">
+    function BlurText({ text, className = "" }) {
+      const ref = useRef(null);
+      const [visible, setVisible] = useState(false);
+      const words = text.split(" ");
+
+      useEffect(() => {
+        const el = ref.current;
+        if (!el) return;
+        const observer = new IntersectionObserver(
+          ([entry]) => {
+            if (entry.isIntersecting) {
+              setVisible(true);
+              observer.disconnect();
+            }
+          },
+          { threshold: 0.1 }
+        );
+        observer.observe(el);
+        return () => observer.disconnect();
+      }, []);
+
+      return (
+        <p
+          ref={ref}
+          className={className}
+          style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", rowGap: "0.1em" }}
+        >
+          {words.map((word, i) => (
+            <motion.span
+              key={i}
+              initial={{ filter: "blur(10px)", opacity: 0, y: 50 }}
+              animate={
+                visible
+                  ? {
+                      filter: ["blur(10px)", "blur(5px)", "blur(0px)"],
+                      opacity: [0, 0.5, 1],
+                      y: [50, -5, 0],
+                    }
+                  : { filter: "blur(10px)", opacity: 0, y: 50 }
+              }
+              transition={{
+                duration: 0.7,
+                times: [0, 0.5, 1],
+                ease: "easeOut",
+                delay: (i * 100) / 1000,
+              }}
+              style={{ display: "inline-block", marginRight: "0.28em" }}
+            >
+              {word}
+            </motion.span>
+          ))}
+        </p>
+      );
+    }
+    window.BlurText = BlurText;
+  </script>
+
+  <script type="text/babel">
+    function Navbar({ onAuthClick, page = "home", user = null }) {
+      const authLabel =
+        page === "login" || page === "register" || page === "profile" || page === "writings" || page === "friend-writings" || page === "countdown" || page === "contacts"
+                  ? "返回首页"
+          : user
+            ? user.nickname
+            : "登录";
+
+      return (
+        <nav className="fixed top-4 left-0 right-0 px-8 lg:px-16 z-50 flex items-center justify-between">
+          <motion.button
+            type="button"
+            onClick={onAuthClick}
+            initial={{ filter: "blur(10px)", opacity: 0, y: 20 }}
+            animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+            className="liquid-glass rounded-full px-5 py-2.5 flex items-center justify-center shrink-0 max-w-[180px]"
+            title={
+              page === "profile"
+                ? "返回首页"
+                : page === "login" || page === "register" || page === "writings" || page === "friend-writings" || page === "countdown" || page === "contacts"
+                  ? "返回首页"
+                  : user
+                    ? "个人资料"
+                    : "登录"
+            }
+          >
+            <span className="font-body text-sm font-medium text-white/90 truncate">
+              {authLabel}
+            </span>
+          </motion.button>
+
+          <motion.div
+            initial={{ filter: "blur(10px)", opacity: 0, y: 20 }}
+            animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
+            className="rounded-full px-5 py-2.5 shrink-0 invisible pointer-events-none"
+            aria-hidden="true"
+          >
+            <span className="font-body text-sm font-medium">{user ? user.nickname : "登录"}</span>
+          </motion.div>
+        </nav>
+      );
+    }
+    window.Navbar = Navbar;
+  </script>
+
+  <script type="text/babel">
+    const HERO_VIDEO =
+      "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260418_080021_d598092b-c4c2-4e53-8e46-94cf9064cd50.mp4";
+
+    const MOODS_EN = ["Serene", "Cheerful", "Melancholy", "Pensive", "Warmhearted", "Irritated"];
+    const MOODS = ["宁静", "愉快", "忧郁", "沉思", "温厚", "烦躁"];
+    const MOOD_LEGACY = {
+      Serene: "宁静",
+      Cheerful: "愉快",
+      Melancholy: "忧郁",
+      Pensive: "沉思",
+      Warmhearted: "温厚",
+      Irritated: "烦躁",
+    };
+    function displayMood(mood) {
+      return MOOD_LEGACY[mood] || mood;
+    }
+    function normalizeMood(mood) {
+      return MOOD_LEGACY[mood] || mood;
+    }
+
+    function ClockIcon() {
+      return (
+        <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 6v6l4 2" strokeLinecap="round" />
+        </svg>
+      );
+    }
+
+    function GlobeIcon() {
+      return (
+        <svg className="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      );
+    }
+
+    const fadeUp = {
+      initial: { filter: "blur(10px)", opacity: 0, y: 20 },
+      animate: { filter: "blur(0px)", opacity: 1, y: 0 },
+      transition: { duration: 0.6, ease: "easeOut" },
+    };
+
+    function Hero({ onAuthClick, onOpenWritings, onOpenCountdown, onOpenContacts, user, nearestCountdown, friendCount }) {
+      const nearestDiff = nearestCountdown
+        ? dayDiffFromToday(nearestCountdown.targetDate)
+        : null;
+      const clockMain =
+        nearestDiff != null ? String(Math.abs(nearestDiff)) : "—";
+      const clockSub = nearestCountdown
+        ? `${nearestCountdown.title} � ${dayLabel(nearestDiff)}`
+        : user
+          ? "设置倒数日"
+          : "Average Videos Watch Time";
+      const contactsMain =
+        user && friendCount != null ? String(friendCount) : "—";
+      const contactsSub = user ? "通讯录" : "通讯录";
+      return (
+        <motion.div className="flex flex-col h-full">
+            <Navbar onAuthClick={onAuthClick} page="home" user={user} />
+
+            <motion.div className="flex-1 flex flex-col items-center justify-center pt-24 px-4">
+              <BlurText
+                text="Life Fragments"
+                className="text-6xl md:text-7xl lg:text-[5.5rem] font-heading italic text-white leading-[0.8] max-w-2xl tracking-[-4px]"
+              />
+
+              <motion.p
+                {...fadeUp}
+                transition={{ ...fadeUp.transition, delay: 0.8 }}
+                className="mt-4 text-sm md:text-base text-white max-w-2xl font-body font-light leading-tight text-center"
+              >
+                Collect fragments of fleeting life,
+                <br />
+                cherish every gentle moment along the way.
+              </motion.p>
+
+              <motion.div
+                {...fadeUp}
+                transition={{ ...fadeUp.transition, delay: 1.1 }}
+                className="flex items-center justify-center mt-6"
+              >
+                <button
+                  type="button"
+                  onClick={onOpenWritings}
+                  className="liquid-glass-strong rounded-full px-5 py-2.5 text-sm font-medium text-white font-body flex items-center gap-2 hover:bg-white/5 transition-colors"
+                >
+                  随记
+                  <ArrowUpRight />
+                </button>
+              </motion.div>
+
+              <motion.div
+                {...fadeUp}
+                transition={{ ...fadeUp.transition, delay: 1.3 }}
+                className="flex items-stretch gap-4 mt-8"
+              >
+                <button
+                  type="button"
+                  onClick={onOpenCountdown}
+                  className="liquid-glass p-5 w-[220px] rounded-[1.25rem] flex flex-col justify-between min-h-[140px] text-left hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  <ClockIcon />
+                  <motion.div>
+                    <p className="font-heading italic text-white text-4xl tracking-[-1px] leading-none mt-4">
+                      {clockMain}
+                    </p>
+                    <p className="text-xs text-white font-body font-light mt-2 line-clamp-2">
+                      {clockSub}
+                    </p>
+                  </motion.div>
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenContacts}
+                  className="liquid-glass p-5 w-[220px] rounded-[1.25rem] flex flex-col justify-between min-h-[140px] text-left hover:bg-white/5 transition-colors cursor-pointer"
+                >
+                  <GlobeIcon />
+                  <motion.div>
+                    <p className="font-heading italic text-white text-4xl tracking-[-1px] leading-none mt-4">
+                      {contactsMain}
+                    </p>
+                    <p className="text-xs text-white font-body font-light mt-2">
+                      {contactsSub}
+                    </p>
+                  </motion.div>
+                </button>
+              </motion.div>
+            </motion.div>
+
+            <motion.div
+              {...fadeUp}
+              transition={{ ...fadeUp.transition, delay: 1.4 }}
+              className="flex flex-col items-center gap-4 pb-8"
+            >
+              <span className="liquid-glass rounded-full px-3.5 py-1 text-xs font-medium text-white font-body">
+                Life holds myriad facets, every one deserves to be penned.
+              </span>
+              <div className="flex w-full max-w-6xl justify-between items-center px-4 md:px-8 font-heading italic text-white text-lg sm:text-xl md:text-2xl lg:text-3xl tracking-tight">
+                {MOODS_EN.map((name, i) => (
+                  <React.Fragment key={name}>
+                    {i > 0 && <span className="opacity-60 shrink-0">{"\u00B7"}</span>}
+                    <span className="whitespace-nowrap">{name}</span>
+                  </React.Fragment>
+                ))}
+              </div>
+            </motion.div>
+        </motion.div>
+      );
+    }
+    window.Hero = Hero;
+  </script>
+
+  <script type="text/babel">
+    function UnderlineField({
+      label,
+      type = "text",
+      value,
+      onChange,
+      placeholder,
+      readOnly = false,
+    }) {
+      return (
+        <div className="w-full">
+          <label className="block text-xs text-white/70 font-body mb-2">{label}</label>
+          <input
+            type={type}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            readOnly={readOnly}
+            className={`w-full bg-transparent border-0 border-b border-white/35 pb-2.5 text-sm font-body placeholder:text-white/35 focus:outline-none transition-colors ${
+              readOnly
+                ? "profile-field-readonly border-white/20"
+                : "text-white focus:border-white/70"
+            }`}
+          />
+        </div>
+      );
+    }
+
+    const DEFAULT_AVATAR = "/Snipaste_2026-05-17_12-56-08.png";
+
+    function Profile({ user, onBack, onLogout, onSave }) {
+      const [nickname, setNickname] = useState(user.nickname);
+      const [password, setPassword] = useState("");
+      const [saving, setSaving] = useState(false);
+      const [message, setMessage] = useState("");
+      const [error, setError] = useState("");
+
+      useEffect(() => {
+        setNickname(user.nickname);
+        setPassword("");
+        setMessage("");
+        setError("");
+      }, [user]);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setSaving(true);
+        setMessage("");
+        setError("");
+        const result = await onSave({
+          account: user.account,
+          nickname: nickname.trim(),
+          password,
+        });
+        setSaving(false);
+        if (result.ok) {
+          setPassword("");
+          setMessage(result.message || "已保存");
+        } else {
+          setError(result.message || "暂无评论");
+        }
+      };
+
+      return (
+        <motion.div className="flex flex-col h-full">
+          <Navbar onAuthClick={onBack} page="profile" user={user} />
+
+          <motion.div className="flex-1 flex items-center justify-center px-4 py-24 overflow-y-auto">
+            <motion.form
+              onSubmit={handleSubmit}
+              initial={{ filter: "blur(12px)", opacity: 0, y: 28, scale: 0.97 }}
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.65, ease: "easeOut", delay: 0.1 }}
+              className="profile-shell"
+            >
+              <motion.div className="profile-card liquid-glass-strong px-8 pt-16 pb-8 flex flex-col items-center relative w-full">
+                <motion.div className="absolute -top-12 left-1/2 -translate-x-1/2 profile-avatar-ring rounded-full">
+                  <img
+                    src={DEFAULT_AVATAR}
+                    alt="Avatar"
+                    className="w-24 h-24 rounded-full object-cover bg-black/40"
+                  />
+                </motion.div>
+
+                <h2 className="font-heading italic text-3xl text-white tracking-tight mt-2">
+                  {nickname || user.nickname}
+                </h2>
+                <p className="text-xs text-white/50 font-body mt-1">Personal Information</p>
+
+                <motion.div className="liquid-glass w-full rounded-2xl p-6 mt-6 space-y-5">
+                  <UnderlineField
+                    label="Account"
+                    value={user.account}
+                    readOnly
+                    onChange={() => {}}
+                    placeholder=""
+                  />
+                  <UnderlineField
+                    label="Password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Leave blank to keep current"
+                  />
+                  <UnderlineField
+                    label="Nickname"
+                    value={nickname}
+                    onChange={(e) => setNickname(e.target.value)}
+                    placeholder="Enter your nickname"
+                  />
+                </motion.div>
+
+                {error && (
+                  <p className="mt-4 text-center text-xs text-red-300 font-body">{error}</p>
+                )}
+                {message && (
+                  <p className="mt-4 text-center text-xs text-emerald-300 font-body">{message}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="mt-6 w-full rounded-xl bg-white text-black text-sm font-semibold font-body py-3 hover:bg-white/90 transition-colors disabled:opacity-60"
+                >
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="mt-3 w-full rounded-xl liquid-glass text-sm font-medium font-body text-white/90 py-3 hover:bg-white/5 transition-colors"
+                >
+                  Log Out
+                </button>
+              </motion.div>
+            </motion.form>
+          </motion.div>
+        </motion.div>
+      );
+    }
+    window.Profile = Profile;
+
+    function buildCommentTree(flat) {
+      const map = new Map();
+      const roots = [];
+      for (const c of flat) {
+        map.set(c.id, { ...c, replies: [] });
+      }
+      for (const c of flat) {
+        const node = map.get(c.id);
+        if (c.parentId) {
+          const parent = map.get(c.parentId);
+          if (parent) parent.replies.push(node);
+          else roots.push(node);
+        } else {
+          roots.push(node);
+        }
+      }
+      return roots;
+    }
+
+    function countComments(flat) {
+      return flat ? flat.length : 0;
+    }
+
+    function formatEntryDate(iso) {
+      try {
+        const d = new Date(iso);
+        return d.toLocaleString("zh-CN", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch {
+        return "";
+      }
+    }
+
+    function startOfDay(d) {
+      const x = new Date(d);
+      x.setHours(0, 0, 0, 0);
+      return x;
+    }
+
+    function dayDiffFromToday(targetDateStr) {
+      const today = startOfDay(new Date());
+      const target = startOfDay(`${targetDateStr}T00:00:00`);
+      return Math.round((target - today) / 86400000);
+    }
+
+    function dayLabel(diff) {
+      if (diff > 0) return `还有 ${diff} 天`;
+      if (diff < 0) return `已过 ${Math.abs(diff)} 天`;
+      return "就是今天";
+    }
+
+    function pickNearestCountdown(items) {
+      if (!items.length) return null;
+      return items.reduce((a, b) =>
+        Math.abs(dayDiffFromToday(a.targetDate)) <=
+        Math.abs(dayDiffFromToday(b.targetDate))
+          ? a
+          : b
+      );
+    }
+
+    function formatCountdownDate(dateStr) {
+      try {
+        const d = new Date(`${dateStr}T00:00:00`);
+        return d.toLocaleDateString("zh-CN", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      } catch {
+        return dateStr;
+      }
+    }
+
+    function Writings({
+      user,
+      onBack,
+      readOnly = false,
+      targetAccount = null,
+      targetNickname = null,
+    }) {
+      const [entries, setEntries] = useState([]);
+      const [content, setContent] = useState("");
+      const [mood, setMood] = useState(MOODS[0]);
+      const [editingId, setEditingId] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [saving, setSaving] = useState(false);
+      const [error, setError] = useState("");
+      const [message, setMessage] = useState("");
+      const [expandedEntryId, setExpandedEntryId] = useState(null);
+      const [commentsMap, setCommentsMap] = useState({});
+      const [commentsLoadingId, setCommentsLoadingId] = useState(null);
+      const [replyingToId, setReplyingToId] = useState(null);
+      const [commentDrafts, setCommentDrafts] = useState({});
+      const [commentSubmitting, setCommentSubmitting] = useState(false);
+      const composeRef = useRef(null);
+
+      const entryOwnerAccount = readOnly ? targetAccount : user.account;
+
+      const draftKey = (entryId, parentId) =>
+        parentId ? `${entryId}-${parentId}` : `${entryId}-root`;
+
+      const fetchComments = async (entryId, force = false) => {
+        if (!force && commentsMap[entryId]) return;
+        setCommentsLoadingId(entryId);
+        try {
+          const res = await fetch(
+            `/api/entries/${entryId}/comments?account=${encodeURIComponent(user.account)}`
+          );
+          const data = await res.json();
+          if (res.ok && data.success) {
+            setCommentsMap((prev) => ({
+              ...prev,
+              [entryId]: data.comments || [],
+            }));
+          }
+        } finally {
+          setCommentsLoadingId(null);
+        }
+      };
+
+      const toggleComments = async (entryId) => {
+        if (expandedEntryId === entryId) {
+          setExpandedEntryId(null);
+          setReplyingToId(null);
+          return;
+        }
+        setExpandedEntryId(entryId);
+        setReplyingToId(null);
+        await fetchComments(entryId);
+      };
+
+      const submitComment = async (entryId, parentId = null) => {
+        const key = draftKey(entryId, parentId);
+        const text = (commentDrafts[key] || "").trim();
+        if (!text) return;
+        setCommentSubmitting(true);
+        try {
+          const res = await fetch(`/api/entries/${entryId}/comments`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              account: user.account,
+              content: text,
+              parentId: parentId || undefined,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            return;
+          }
+          setCommentDrafts((prev) => ({ ...prev, [key]: "" }));
+          setReplyingToId(null);
+          await fetchComments(entryId, true);
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setCommentSubmitting(false);
+        }
+      };
+
+      const deleteComment = async (commentId, entryId) => {
+        if (!window.confirm("确定删除这条评论吗？")) return;
+        try {
+          const res = await fetch(`/api/comments/${commentId}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account: user.account }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            return;
+          }
+          await fetchComments(entryId, true);
+        } catch {
+          setError("无法连接服务器");
+        }
+      };
+
+      const canDeleteComment = (comment) =>
+        comment.authorAccount === user.account ||
+        user.account === entryOwnerAccount;
+
+      const renderCommentNode = (comment, entryId, depth = 0) => {
+        const isReplying = replyingToId === comment.id;
+        const replyKey = draftKey(entryId, comment.id);
+        return (
+          <motion.div
+            key={comment.id}
+            className={depth > 0 ? "mt-2 pl-3 border-l border-white/10" : "mt-3 first:mt-0"}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-white/90 font-body">
+                  {comment.authorNickname}
+                  <span className="text-white/35 font-normal ml-2">
+                    {formatEntryDate(comment.createdAt)}
+                  </span>
+                </p>
+                <p className="mt-1 text-xs text-white/80 font-body leading-relaxed whitespace-pre-wrap break-words">
+                  {comment.content}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  setReplyingToId(isReplying ? null : comment.id)
+                }
+                className="text-[10px] font-body text-white/55 hover:text-white/85 transition-colors"
+              >
+                回复
+              </button>
+              {canDeleteComment(comment) && (
+                <button
+                  type="button"
+                  onClick={() => deleteComment(comment.id, entryId)}
+                  className="text-[10px] font-body text-red-300/70 hover:text-red-200 transition-colors"
+                >
+                  删除
+                </button>
+              )}
+            </div>
+            {isReplying && (
+              <div className="mt-2 flex gap-2 items-end">
+                <textarea
+                  value={commentDrafts[replyKey] || ""}
+                  onChange={(e) =>
+                    setCommentDrafts((prev) => ({
+                      ...prev,
+                      [replyKey]: e.target.value,
+                    }))
+                  }
+                  placeholder="写下回复..."
+                  rows={2}
+                  className="comment-input flex-1 font-body"
+                />
+                <button
+                  type="button"
+                  disabled={commentSubmitting}
+                  onClick={() => submitComment(entryId, comment.id)}
+                  className="shrink-0 rounded-lg bg-white/90 text-black text-xs font-body font-medium px-3 py-2 hover:bg-white transition-colors disabled:opacity-60"
+                  >
+                    发表
+                  </button>
+              </div>
+            )}
+            {comment.replies?.map((reply) =>
+              renderCommentNode(reply, entryId, depth + 1)
+            )}
+          </motion.div>
+        );
+      };
+
+      const fetchEntries = useCallback(async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const url = readOnly && targetAccount
+            ? `/api/friends/entries?account=${encodeURIComponent(user.account)}&friendAccount=${encodeURIComponent(targetAccount)}`
+            : `/api/entries?account=${encodeURIComponent(user.account)}&viewerAccount=${encodeURIComponent(user.account)}`;
+          const res = await fetch(url);
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            setEntries([]);
+            return;
+          }
+          setEntries(data.entries || []);
+        } catch {
+          setError("无法连接服务器");
+          setEntries([]);
+        } finally {
+          setLoading(false);
+        }
+      }, [user.account, readOnly, targetAccount]);
+
+      useEffect(() => {
+        fetchEntries();
+      }, [fetchEntries]);
+
+      const resetForm = () => {
+        setContent("");
+        setMood(MOODS[0]);
+        setEditingId(null);
+      };
+
+      const handleSave = async () => {
+        const trimmed = content.trim();
+        if (!trimmed) {
+          setError("请先写下一些文字");
+          setMessage("");
+          return;
+        }
+        setSaving(true);
+        setError("");
+        setMessage("");
+        try {
+          const isEdit = editingId != null;
+          const url = isEdit ? `/api/entries/${editingId}` : "/api/entries";
+          const res = await fetch(url, {
+            method: isEdit ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              account: user.account,
+              content: trimmed,
+              mood,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            return;
+          }
+          resetForm();
+          setMessage(isEdit ? "已更新" : "已保存");
+          await fetchEntries();
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      const handleEdit = (entry) => {
+        setEditingId(entry.id);
+        setContent(entry.content);
+        setMood(normalizeMood(entry.mood));
+        setError("");
+        setMessage("");
+        composeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      };
+
+      const handleDelete = async (id) => {
+        if (!window.confirm("确定删除这条日记吗？")) return;
+        setError("");
+        setMessage("");
+        try {
+          const res = await fetch(`/api/entries/${id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account: user.account }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            return;
+          }
+          if (editingId === id) resetForm();
+          setMessage("已删除");
+          await fetchEntries();
+        } catch {
+          setError("无法连接服务器");
+        }
+      };
+
+      const handleKeyDown = (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+          e.preventDefault();
+          handleSave();
+        }
+      };
+
+      const pageTitle = readOnly
+        ? `${targetNickname || targetAccount || "好友"} 的随记`
+        : "登录";
+      const navbarPage = readOnly ? "friend-writings" : "writings";
+
+      return (
+        <motion.div className="flex flex-col h-full">
+          <Navbar onAuthClick={onBack} page={navbarPage} user={user} />
+
+          <motion.div className="flex-1 flex flex-col items-center px-4 pt-24 pb-6 overflow-hidden min-h-0">
+            {!readOnly && (
+              <motion.div
+                ref={composeRef}
+                initial={{ filter: "blur(12px)", opacity: 0, y: 24 }}
+                animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut", delay: 0.05 }}
+                className="writings-shell w-full shrink-0"
+              >
+                <motion.div className="writings-card liquid-glass-strong px-6 py-6 w-full">
+                  <h2 className="font-heading italic text-2xl md:text-3xl text-white tracking-tight">
+                    随记
+                  </h2>
+                  <p className="text-xs text-white/50 font-body mt-1">
+                    记下此刻的一小段心情
+                  </p>
+
+                  <p className="text-xs text-white/60 font-body mt-5 mb-2">心情</p>
+                  <motion.div className="flex flex-wrap gap-2">
+                    {MOODS.map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setMood(m)}
+                        className={`mood-chip rounded-full px-3 py-1.5 text-xs font-body text-white/90 ${
+                          mood === m ? "mood-chip-active" : ""
+                        }`}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </motion.div>
+
+                  <motion.div className="liquid-glass rounded-2xl p-4 mt-4">
+                    <textarea
+                      value={content}
+                      onChange={(e) => setContent(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="此刻心里在想什么？"
+                      className="writings-textarea text-sm font-body leading-relaxed"
+                    />
+                    <p className="text-[10px] text-white/35 font-body mt-2 text-right">
+                      Ctrl+Enter 保存
+                    </p>
+                  </motion.div>
+
+                  {error && (
+                    <p className="mt-3 text-xs text-red-300 font-body text-center">{error}</p>
+                  )}
+                  {message && (
+                    <p className="mt-3 text-xs text-emerald-300 font-body text-center">{message}</p>
+                  )}
+
+                  <motion.div className="flex gap-2 mt-4">
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="flex-1 rounded-xl bg-white text-black text-sm font-semibold font-body py-2.5 hover:bg-white/90 transition-colors disabled:opacity-60"
+                    >
+                      {saving
+                        ? "保存中..."
+                        : editingId
+                          ? "更新碎笔"
+                          : "保存碎笔"}
+                    </button>
+                    {editingId && (
+                      <button
+                        type="button"
+                        onClick={resetForm}
+                        className="rounded-xl liquid-glass text-sm font-medium font-body text-white/90 px-4 py-2.5 hover:bg-white/5 transition-colors"
+                      >
+                        取消
+                      </button>
+                    )}
+                  </motion.div>
+                </motion.div>
+              </motion.div>
+            )}
+
+            {readOnly && (
+              <motion.div
+                initial={{ filter: "blur(12px)", opacity: 0, y: 24 }}
+                animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut", delay: 0.05 }}
+                className="writings-shell w-full shrink-0"
+              >
+                <motion.div className="writings-card liquid-glass-strong px-6 py-6 w-full">
+                  <h2 className="font-heading italic text-2xl md:text-3xl text-white tracking-tight truncate">
+                    {pageTitle}
+                  </h2>
+                  {error && (
+                    <p className="mt-3 text-xs text-red-300 font-body text-center">{error}</p>
+                  )}
+                </motion.div>
+              </motion.div>
+            )}
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className={`text-xs text-white/45 font-body mb-3 tracking-wide uppercase ${readOnly ? "mt-0" : "mt-5"}`}
+            >
+              近期的碎笔
+            </motion.p>
+
+            <motion.div
+              layout
+              className="writings-shell w-full flex-1 min-h-0 overflow-hidden"
+            >
+              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0">
+                <motion.div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
+                  {loading && (
+                    <p className="text-center text-xs text-white/50 font-body py-8">
+                      加载中...
+                    </p>
+                  )}
+                  {!loading && entries.length === 0 && (
+                    <p className="text-center text-xs text-white/45 font-body py-8">
+                      {readOnly ? "TA 还没有发布随记" : "还没有碎笔，在上方写下第一条吧。"}
+                    </p>
+                  )}
+                  {!loading &&
+                    entries.map((entry, i) => (
+                      <motion.article
+                        key={entry.id}
+                        layout
+                        initial={{ filter: "blur(8px)", opacity: 0, y: 12 }}
+                        animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: i * 0.04 }}
+                        className="liquid-glass rounded-2xl p-4"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="mood-chip mood-chip-active rounded-full px-2.5 py-0.5 text-[10px] font-body">
+                                {displayMood(entry.mood)}
+                              </span>
+                              <span className="text-[10px] text-white/40 font-body">
+                                {formatEntryDate(entry.createdAt)}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm text-white/85 font-body leading-relaxed whitespace-pre-wrap break-words">
+                              {entry.content}
+                            </p>
+                          </div>
+                        </div>
+                                                                        <motion.div className="flex items-center justify-between mt-3 gap-3">
+                          {!readOnly ? (
+                            <motion.div className="flex gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleEdit(entry)}
+                                className="text-xs font-body text-white/70 hover:text-white transition-colors"
+                              >
+                                编辑
+                              </button>
+                              <span className="text-white/20">|</span>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(entry.id)}
+                                className="text-xs font-body text-red-300/80 hover:text-red-200 transition-colors"
+                              >
+                                删除
+                              </button>
+                            </motion.div>
+                          ) : (
+                            <motion.div />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => toggleComments(entry.id)}
+                            className="text-xs font-body text-white/70 hover:text-white transition-colors shrink-0"
+                          >
+                            评论
+                            {commentsMap[entry.id]?.length > 0 && (
+                              <span className="text-white/45 ml-1">
+                                ({commentsMap[entry.id].length})
+                              </span>
+                            )}
+                          </button>
+                        </motion.div>
+
+                        {expandedEntryId === entry.id && (
+                          <motion.div className="comment-panel">
+                            {commentsLoadingId === entry.id && (
+                              <p className="text-xs text-white/45 font-body text-center py-2">
+                                加载中...
+                              </p>
+                            )}
+                            {commentsLoadingId !== entry.id && (
+                              <>
+                                {buildCommentTree(commentsMap[entry.id] || []).length === 0 ? (
+                                  <p className="text-xs text-white/45 font-body text-center py-2">
+                                    暂无评论
+                                  </p>
+                                ) : (
+                                  buildCommentTree(commentsMap[entry.id] || []).map((c) =>
+                                    renderCommentNode(c, entry.id, 0)
+                                  )
+                                )}
+                                <motion.div className="mt-3 flex gap-2 items-end">
+                                  <textarea
+                                    value={commentDrafts[draftKey(entry.id, null)] || ""}
+                                    onChange={(e) =>
+                                      setCommentDrafts((prev) => ({
+                                        ...prev,
+                                        [draftKey(entry.id, null)]: e.target.value,
+                                      }))
+                                    }
+                                    placeholder="写下评论..."
+                                    rows={2}
+                                    className="comment-input flex-1 font-body"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={commentSubmitting}
+                                    onClick={() => submitComment(entry.id, null)}
+                                    className="shrink-0 rounded-lg bg-white/90 text-black text-xs font-body font-medium px-3 py-2 hover:bg-white transition-colors disabled:opacity-60"
+                                  >
+                                    发表
+                                  </button>
+                                </motion.div>
+                              </>
+                            )}
+                          </motion.div>
+                        )}
+                      </motion.article>
+                    ))}
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+      );
+    }
+
+    window.Writings = Writings;
+
+    function Countdown({ user, onBack }) {
+      const [items, setItems] = useState([]);
+      const [title, setTitle] = useState("");
+      const [targetDate, setTargetDate] = useState("");
+      const [editingId, setEditingId] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [saving, setSaving] = useState(false);
+      const [error, setError] = useState("");
+      const [message, setMessage] = useState("");
+
+      const fetchCountdowns = useCallback(async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const res = await fetch(
+            `/api/countdowns?account=${encodeURIComponent(user.account)}`
+          );
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            setItems([]);
+            return;
+          }
+          setItems(data.countdowns || []);
+        } catch {
+          setError("无法连接服务器");
+          setItems([]);
+        } finally {
+          setLoading(false);
+        }
+      }, [user.account]);
+
+      useEffect(() => {
+        fetchCountdowns();
+      }, [fetchCountdowns]);
+
+      const nearest = pickNearestCountdown(items);
+      const nearestDiff = nearest ? dayDiffFromToday(nearest.targetDate) : null;
+
+      const resetForm = () => {
+        setTitle("");
+        setTargetDate("");
+        setEditingId(null);
+      };
+
+      const handleSave = async () => {
+        const trimmedTitle = title.trim();
+        if (!trimmedTitle) {
+          setError("请输入事件名称");
+          setMessage("");
+          return;
+        }
+        if (!targetDate) {
+          setError("请选择目标日期");
+          setMessage("");
+          return;
+        }
+        setSaving(true);
+        setError("");
+        setMessage("");
+        try {
+          const isEdit = editingId != null;
+          const url = isEdit ? `/api/countdowns/${editingId}` : "/api/countdowns";
+          const res = await fetch(url, {
+            method: isEdit ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              account: user.account,
+              title: trimmedTitle,
+              targetDate,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "保存失败");
+            return;
+          }
+          resetForm();
+          setMessage(isEdit ? "已更新" : "已保存");
+          await fetchCountdowns();
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      const handleEdit = (item) => {
+        setEditingId(item.id);
+        setTitle(item.title);
+        setTargetDate(item.targetDate);
+        setError("");
+        setMessage("");
+      };
+
+      const handleDelete = async (id) => {
+        if (!window.confirm("确定删除这个倒数日吗？")) return;
+        setError("");
+        setMessage("");
+        try {
+          const res = await fetch(`/api/countdowns/${id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account: user.account }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "删除失败");
+            return;
+          }
+          if (editingId === id) resetForm();
+          setMessage("已删除");
+          await fetchCountdowns();
+        } catch {
+          setError("无法连接服务器");
+        }
+      };
+
+      return (
+        <motion.div className="flex flex-col h-full">
+          <Navbar onAuthClick={onBack} page="countdown" user={user} />
+
+          <motion.div className="flex-1 flex flex-col items-center px-4 pt-24 pb-6 overflow-hidden min-h-0">
+            <motion.div
+              initial={{ filter: "blur(12px)", opacity: 0, y: 24 }}
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut", delay: 0.05 }}
+              className="writings-shell w-full max-w-lg shrink-0"
+            >
+              <div className="writings-card liquid-glass-strong px-6 py-6 w-full text-center">
+                <h2 className="font-heading italic text-2xl md:text-3xl text-white tracking-tight">
+                  倒数日
+                </h2>
+                <p className="text-xs text-white/50 font-body mt-1">
+                  离今天最近的目标日
+                </p>
+                {nearest ? (
+                  <>
+                    <p className="font-heading italic text-white text-6xl md:text-7xl tracking-tight mt-6 leading-none">
+                      {Math.abs(nearestDiff)}
+                    </p>
+                    <p className="text-sm text-white/80 font-body mt-3">
+                      {dayLabel(nearestDiff)}
+                    </p>
+                    <p className="text-base text-white font-body mt-2">{nearest.title}</p>
+                    <p className="text-xs text-white/45 font-body mt-1">
+                      {formatCountdownDate(nearest.targetDate)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-white/50 font-body mt-8 py-6">
+                    {loading ? "加载中..." : "还没有倒数日，在下方添加一个吧"}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ filter: "blur(10px)", opacity: 0, y: 16 }}
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="writings-shell w-full max-w-lg shrink-0 mt-4"
+            >
+              <motion.div className="writings-card liquid-glass-strong px-6 py-5 w-full">
+                <p className="text-xs text-white/60 font-body mb-3">
+                  {editingId ? "编辑倒数日" : "新增倒数日"}
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-white/70 font-body mb-2">
+                      事件名称
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="例如：毕业典礼"
+                      className="w-full bg-transparent border-0 border-b border-white/35 pb-2.5 text-sm font-body text-white placeholder:text-white/35 focus:outline-none focus:border-white/70"
+                    />
+                  </div>
+                  <motion.div>
+                    <label className="block text-xs text-white/70 font-body mb-2">
+                      目标日期
+                    </label>
+                    <input
+                      type="date"
+                      value={targetDate}
+                      onChange={(e) => setTargetDate(e.target.value)}
+                      className="w-full bg-white/5 border border-white/20 rounded-xl px-3 py-2.5 text-sm font-body text-white focus:outline-none focus:border-white/40 [color-scheme:dark]"
+                    />
+                  </motion.div>
+                </div>
+
+                {error && (
+                  <p className="mt-3 text-xs text-red-300 font-body text-center">{error}</p>
+                )}
+                {message && (
+                  <p className="mt-3 text-xs text-emerald-300 font-body text-center">{message}</p>
+                )}
+
+                <motion.div className="flex gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 rounded-xl bg-white text-black text-sm font-semibold font-body py-2.5 hover:bg-white/90 transition-colors disabled:opacity-60"
+                  >
+                    {saving ? "保存中..." : editingId ? "更新" : "保存"}
+                  </button>
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="rounded-xl liquid-glass text-sm font-medium font-body text-white/90 px-4 py-2.5 hover:bg-white/5 transition-colors"
+                    >
+                      取消
+                    </button>
+                  )}
+                </motion.div>
+              </motion.div>
+            </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-xs text-white/45 font-body mt-5 mb-3 tracking-wide"
+            >
+              全部倒数日
+            </motion.p>
+
+            <motion.div className="writings-shell w-full max-w-lg flex-1 min-h-0 overflow-hidden">
+              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0">
+                <motion.div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
+                  {loading && (
+                    <p className="text-center text-xs text-white/50 font-body py-8">
+                      加载中...
+                    </p>
+                  )}
+                  {!loading && items.length === 0 && (
+                    <p className="text-center text-xs text-white/45 font-body py-8">
+                      暂无倒数日
+                    </p>
+                  )}
+                  {!loading &&
+                    items.map((item, i) => {
+                      const diff = dayDiffFromToday(item.targetDate);
+                      const isNearest = nearest && nearest.id === item.id;
+                      return (
+                        <motion.article
+                          key={item.id}
+                          layout
+                          initial={{ filter: "blur(8px)", opacity: 0, y: 12 }}
+                          animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: i * 0.04 }}
+                          className={`liquid-glass rounded-2xl p-4 ${
+                            isNearest ? "ring-1 ring-white/25" : ""
+                          }`}
+                        >
+                          <motion.div className="flex items-start justify-between gap-3">
+                            <motion.div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-white font-body">
+                                {item.title}
+                              </p>
+                              <p className="text-xs text-white/45 font-body mt-1">
+                                {formatCountdownDate(item.targetDate)}
+                              </p>
+                              <p className="text-xs text-white/70 font-body mt-2">
+                                {dayLabel(diff)}
+                                {isNearest && (
+                                  <span className="ml-2 text-white/40">· 最近</span>
+                                )}
+                              </p>
+                            </motion.div>
+                            <span className="font-heading italic text-2xl text-white shrink-0">
+                              {Math.abs(diff)}
+                            </span>
+                          </motion.div>
+                          <motion.div className="flex gap-2 mt-3">
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(item)}
+                              className="text-xs font-body text-white/70 hover:text-white transition-colors"
+                            >
+                              编辑
+                            </button>
+                            <span className="text-white/20">|</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item.id)}
+                              className="text-xs font-body text-red-300/80 hover:text-red-200 transition-colors"
+                            >
+                              删除
+                            </button>
+                          </motion.div>
+                        </motion.article>
+                      );
+                    })}
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+      );
+    }
+    window.Countdown = Countdown;
+
+    function Contacts({ user, onBack, onViewFriend }) {
+      const [friends, setFriends] = useState([]);
+      const [requests, setRequests] = useState([]);
+      const [friendAccount, setFriendAccount] = useState("");
+      const [loading, setLoading] = useState(true);
+      const [requestsLoading, setRequestsLoading] = useState(false);
+      const [saving, setSaving] = useState(false);
+      const [showRequests, setShowRequests] = useState(false);
+      const [error, setError] = useState("");
+      const [message, setMessage] = useState("");
+
+      const fetchFriends = useCallback(async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const res = await fetch(
+            `/api/friends?account=${encodeURIComponent(user.account)}`
+          );
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            setFriends([]);
+            return;
+          }
+          setFriends(data.friends || []);
+        } catch {
+          setError("无法连接服务器");
+          setFriends([]);
+        } finally {
+          setLoading(false);
+        }
+      }, [user.account]);
+
+      const fetchRequests = useCallback(async () => {
+        setRequestsLoading(true);
+        try {
+          const res = await fetch(
+            `/api/friend-requests?account=${encodeURIComponent(user.account)}`
+          );
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setRequests([]);
+            return;
+          }
+          setRequests(data.requests || []);
+        } catch {
+          setRequests([]);
+        } finally {
+          setRequestsLoading(false);
+        }
+      }, [user.account]);
+
+      useEffect(() => {
+        fetchFriends();
+        fetchRequests();
+      }, [fetchFriends, fetchRequests]);
+
+      const handleAdd = async () => {
+        const trimmed = friendAccount.trim();
+        if (!trimmed) {
+          setError("请输入好友账号");
+          setMessage("");
+          return;
+        }
+        setSaving(true);
+        setError("");
+        setMessage("");
+        try {
+          const res = await fetch("/api/friends", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              account: user.account,
+              friendAccount: trimmed,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            return;
+          }
+          setFriendAccount("");
+          setMessage(data.message || "好友申请已发送");
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      const handleAccept = async (id) => {
+        setError("");
+        setMessage("");
+        try {
+          const res = await fetch(`/api/friend-requests/${id}/accept`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account: user.account }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            return;
+          }
+          setMessage(data.message || "好友申请已发送");
+          await Promise.all([fetchFriends(), fetchRequests()]);
+        } catch {
+          setError("无法连接服务器");
+        }
+      };
+
+      const handleReject = async (id) => {
+        setError("");
+        setMessage("");
+        try {
+          const res = await fetch(`/api/friend-requests/${id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account: user.account }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            return;
+          }
+          await fetchRequests();
+        } catch {
+          setError("无法连接服务器");
+        }
+      };
+
+      const handleRemove = async (id) => {
+        if (!window.confirm("确定移除这位好友吗？")) return;
+        setError("");
+        setMessage("");
+        try {
+          const res = await fetch(`/api/friends/${id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account: user.account }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            return;
+          }
+          setMessage("已移除好友");
+          await fetchFriends();
+        } catch {
+          setError("无法连接服务器");
+        }
+      };
+
+      return (
+        <motion.div className="flex flex-col h-full">
+          <Navbar onAuthClick={onBack} page="contacts" user={user} />
+
+          <motion.div className="flex-1 flex flex-col items-center px-4 pt-24 pb-6 overflow-hidden min-h-0">
+            <motion.div
+              initial={{ filter: "blur(12px)", opacity: 0, y: 24 }}
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut", delay: 0.05 }}
+              className="writings-shell w-full max-w-lg shrink-0"
+            >
+              <div className="writings-card liquid-glass-strong px-6 py-6 w-full">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="font-heading italic text-2xl md:text-3xl text-white tracking-tight">
+                      通讯录
+                    </h2>
+                    <p className="text-xs text-white/50 font-body mt-1">
+                      {loading ? "Loading..." : `${friends.length} friend${friends.length === 1 ? "" : "s"}`}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRequests((v) => !v);
+                      if (!showRequests) fetchRequests();
+                    }}
+                    className={`relative liquid-glass rounded-full w-11 h-11 flex items-center justify-center shrink-0 transition-colors ${
+                      showRequests ? "ring-1 ring-white/50" : ""
+                    }`}
+                    title="Friend requests"
+                    aria-label="Friend requests"
+                  >
+                    <svg className="w-5 h-5 text-white/90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    {requests.length > 0 && (
+                      <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-white text-black text-[10px] font-semibold font-body flex items-center justify-center">
+                        {requests.length > 9 ? "9+" : requests.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {showRequests && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="liquid-glass rounded-2xl p-4 mt-4 space-y-3"
+                  >
+                    <p className="text-xs text-white/70 font-body font-medium tracking-wide">
+                      Friend Requests
+                    </p>
+                    {requestsLoading && (
+                      <p className="text-xs text-white/45 font-body text-center py-2">Loading...</p>
+                    )}
+                    {!requestsLoading && requests.length === 0 && (
+                      <p className="text-xs text-white/45 font-body text-center py-2">
+                        No pending requests
+                      </p>
+                    )}
+                    {!requestsLoading &&
+                      requests.map((req) => (
+                        <div
+                          key={req.id}
+                          className="flex items-center gap-3 pt-2 border-t border-white/10 first:border-0 first:pt-0"
+                        >
+                          <motion.div className="w-10 h-10 rounded-full liquid-glass-strong flex items-center justify-center shrink-0 px-1 overflow-hidden">
+                            <span className="text-[9px] leading-tight font-body text-white text-center line-clamp-2 break-words max-w-full">
+                              {req.nickname || req.account}
+                            </span>
+                          </motion.div>
+                          <motion.div className="min-w-0 flex-1">
+                            <p className="text-sm text-white font-body truncate">{req.nickname}</p>
+                            <p className="text-xs text-white/45 font-body truncate">{req.account}</p>
+                          </motion.div>
+                          <motion.div className="flex gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleAccept(req.id)}
+                              className="text-xs font-body text-emerald-300 hover:text-emerald-200"
+                            >
+                              Accept
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleReject(req.id)}
+                              className="text-xs font-body text-white/50 hover:text-white/80"
+                            >
+                              Decline
+                            </button>
+                          </motion.div>
+                        </div>
+                      ))}
+                  </motion.div>
+                )}
+
+                <div className="liquid-glass rounded-2xl p-4 mt-5 space-y-3">
+                  <label className="block text-xs text-white/70 font-body">
+                    Friend account
+                  </label>
+                  <input
+                    type="text"
+                    value={friendAccount}
+                    onChange={(e) => setFriendAccount(e.target.value)}
+                    placeholder="Enter account"
+                    className="w-full bg-transparent border-0 border-b border-white/35 pb-2.5 text-sm font-body text-white placeholder:text-white/35 focus:outline-none focus:border-white/70"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAdd}
+                    disabled={saving}
+                    className="w-full rounded-xl bg-white text-black text-sm font-semibold font-body py-2.5 hover:bg-white/90 transition-colors disabled:opacity-60"
+                  >
+                    {saving ? "Sending..." : "Send Request"}
+                  </button>
+                </div>
+
+                {error && (
+                  <p className="mt-3 text-xs text-red-300 font-body text-center">{error}</p>
+                )}
+                {message && (
+                  <p className="mt-3 text-xs text-emerald-300 font-body text-center">{message}</p>
+                )}
+              </div>
+            </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-xs text-white/45 font-body mt-5 mb-3 tracking-wide"
+            >
+              Friends
+            </motion.p>
+
+            <motion.div className="writings-shell w-full max-w-lg flex-1 min-h-0 overflow-hidden">
+              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0">
+                <motion.div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
+                  {loading && (
+                    <p className="text-center text-xs text-white/50 font-body py-8">
+                      Loading...
+                    </p>
+                  )}
+                  {!loading && friends.length === 0 && (
+                    <p className="text-center text-xs text-white/45 font-body py-8">
+                      No friends yet. Add someone by account above.
+                    </p>
+                  )}
+                  {!loading &&
+                    friends.map((friend, i) => (
+                      <motion.div
+                        key={friend.id}
+                        layout
+                        initial={{ filter: "blur(8px)", opacity: 0, y: 12 }}
+                        animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: i * 0.04 }}
+                        className="liquid-glass rounded-2xl p-4 flex items-center gap-3 hover:bg-white/5 transition-colors cursor-pointer"
+                        onClick={() => onViewFriend?.(friend)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            onViewFriend?.(friend);
+                          }
+                        }}
+                      >
+                        <motion.div
+                          className="w-14 h-14 rounded-full liquid-glass-strong flex items-center justify-center shrink-0 px-1.5 overflow-hidden"
+                          title={friend.nickname || friend.account}
+                        >
+                          <span className="text-[9px] leading-tight font-body font-medium text-white text-center line-clamp-2 break-words max-w-full">
+                            {friend.nickname || friend.account}
+                          </span>
+                        </motion.div>
+                        <motion.div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-white font-body truncate">
+                            {friend.nickname}
+                          </p>
+                          <p className="text-xs text-white/45 font-body truncate">
+                            {friend.account}
+                          </p>
+                        </motion.div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemove(friend.id);
+                          }}
+                          className="text-xs font-body text-red-300/80 hover:text-red-200 transition-colors shrink-0"
+                        >
+                          Remove
+                        </button>
+                      </motion.div>
+                    ))}
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+      );
+    }
+    window.Contacts = Contacts;
+
+    function Login({ onBack, onLogin, onOpenRegister, loginError, loginLoading }) {
+      const [account, setAccount] = useState("");
+      const [password, setPassword] = useState("");
+      const [remember, setRemember] = useState(false);
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        await onLogin(account.trim(), password, remember);
+      };
+
+      return (
+        <motion.div className="flex flex-col h-full">
+          <Navbar onAuthClick={onBack} page="login" />
+
+          <motion.div className="flex-1 flex items-center justify-center px-4 pb-8">
+            <motion.form
+              onSubmit={handleSubmit}
+              initial={{ filter: "blur(12px)", opacity: 0, y: 28, scale: 0.97 }}
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.65, ease: "easeOut", delay: 0.1 }}
+              className="liquid-glass-strong w-full max-w-md rounded-2xl px-8 py-10 flex flex-col"
+            >
+              <h1 className="text-center text-xl font-semibold text-white font-body tracking-wide mb-8">
+                Login
+              </h1>
+
+              <div className="space-y-6">
+                <UnderlineField
+                  label="Account"
+                  value={account}
+                  onChange={(e) => setAccount(e.target.value)}
+                  placeholder="Enter your account"
+                />
+                <UnderlineField
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                />
+              </div>
+
+              <div className="flex items-center justify-between mt-6 text-xs font-body text-white/80">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <span
+                    className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+                      remember ? "bg-white border-white" : "border-white/50"
+                    }`}
+                  >
+                    {remember && (
+                      <svg className="w-2.5 h-2.5 text-black" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M2 6l3 3 5-5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </span>
+                  Remember me
+                </label>
+                <button type="button" className="text-white/80 hover:text-white transition-colors">
+                  Forgot password?
+                </button>
+              </div>
+
+              {loginError && (
+                <p className="mt-4 text-center text-xs text-red-300 font-body">{loginError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loginLoading}
+                className="mt-8 w-full rounded-xl bg-white text-black text-sm font-semibold font-body py-3 hover:bg-white/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loginLoading ? "Logging in..." : "Log In"}
+              </button>
+
+              <p className="mt-6 text-center text-xs text-white/70 font-body">
+                Don&apos;t have an account?{" "}
+                <button
+                  type="button"
+                  onClick={onOpenRegister}
+                  className="text-white hover:underline"
+                >
+                  Register
+                </button>
+              </p>
+            </motion.form>
+          </motion.div>
+        </motion.div>
+      );
+    }
+    window.Login = Login;
+
+    function Register({ onBack, onRegister, onOpenLogin, registerError, registerLoading }) {
+      const [account, setAccount] = useState("");
+      const [password, setPassword] = useState("");
+      const [confirmPassword, setConfirmPassword] = useState("");
+      const [nickname, setNickname] = useState("");
+      const [localError, setLocalError] = useState("");
+
+      const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLocalError("");
+        const trimmedAccount = account.trim();
+        const trimmedNickname = nickname.trim();
+
+        if (!trimmedAccount) {
+          setLocalError("Please enter an account");
+          return;
+        }
+        if (password.length < 6) {
+          setLocalError("Password must be at least 6 characters");
+          return;
+        }
+        if (password !== confirmPassword) {
+          setLocalError("Passwords do not match");
+          return;
+        }
+
+        await onRegister(trimmedAccount, password, trimmedNickname);
+      };
+
+      const displayError = localError || registerError;
+
+      return (
+        <motion.div className="flex flex-col h-full">
+          <Navbar onAuthClick={onBack} page="register" />
+
+          <motion.div className="flex-1 flex items-center justify-center px-4 pb-8">
+            <motion.form
+              onSubmit={handleSubmit}
+              initial={{ filter: "blur(12px)", opacity: 0, y: 28, scale: 0.97 }}
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.65, ease: "easeOut", delay: 0.1 }}
+              className="liquid-glass-strong w-full max-w-md rounded-2xl px-8 py-10 flex flex-col"
+            >
+              <h1 className="text-center text-xl font-semibold text-white font-body tracking-wide mb-8">
+                Register
+              </h1>
+
+              <motion.div className="space-y-6">
+                <UnderlineField
+                  label="Account"
+                  value={account}
+                  onChange={(e) => setAccount(e.target.value)}
+                  placeholder="Choose your account"
+                />
+                <UnderlineField
+                  label="Nickname"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  placeholder="Optional, defaults to account"
+                />
+                <UnderlineField
+                  label="Password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                />
+                <UnderlineField
+                  label="Confirm Password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter your password"
+                />
+              </motion.div>
+
+              {displayError && (
+                <p className="mt-4 text-center text-xs text-red-300 font-body">{displayError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={registerLoading}
+                className="mt-8 w-full rounded-xl bg-white text-black text-sm font-semibold font-body py-3 hover:bg-white/90 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {registerLoading ? "Creating account..." : "Create Account"}
+              </button>
+
+              <p className="mt-6 text-center text-xs text-white/70 font-body">
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={onOpenLogin}
+                  className="text-white hover:underline"
+                >
+                  Log In
+                </button>
+              </p>
+            </motion.form>
+          </motion.div>
+        </motion.div>
+      );
+    }
+    window.Register = Register;
+  </script>
+
+  <script type="text/babel">
+    const USER_STORAGE_KEY = "lf_user";
+
+    function loadStoredUser() {
+      try {
+        const raw = localStorage.getItem(USER_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function App() {
+      const [page, setPage] = useState("home");
+      const [user, setUser] = useState(loadStoredUser);
+      const [loginError, setLoginError] = useState("");
+      const [loginLoading, setLoginLoading] = useState(false);
+      const [registerError, setRegisterError] = useState("");
+      const [registerLoading, setRegisterLoading] = useState(false);
+      const [nearestCountdown, setNearestCountdown] = useState(null);
+      const [friendCount, setFriendCount] = useState(null);
+      const [viewingFriend, setViewingFriend] = useState(null);
+
+      const persistUser = (nextUser, rememberStore) => {
+        setUser(nextUser);
+        if (rememberStore || localStorage.getItem(USER_STORAGE_KEY)) {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(nextUser));
+        }
+      };
+
+      const logout = () => {
+        setUser(null);
+        localStorage.removeItem(USER_STORAGE_KEY);
+        setPage("home");
+      };
+
+      const fetchNearestCountdown = useCallback(async (account) => {
+        if (!account) {
+          setNearestCountdown(null);
+          return;
+        }
+        try {
+          const res = await fetch(
+            `/api/countdowns?account=${encodeURIComponent(account)}`
+          );
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setNearestCountdown(null);
+            return;
+          }
+          setNearestCountdown(pickNearestCountdown(data.countdowns || []));
+        } catch {
+          setNearestCountdown(null);
+        }
+      }, []);
+
+      const fetchFriendCount = useCallback(async (account) => {
+        if (!account) {
+          setFriendCount(null);
+          return;
+        }
+        try {
+          const res = await fetch(
+            `/api/friends?account=${encodeURIComponent(account)}`
+          );
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setFriendCount(null);
+            return;
+          }
+          setFriendCount((data.friends || []).length);
+        } catch {
+          setFriendCount(null);
+        }
+      }, []);
+
+      useEffect(() => {
+        fetchNearestCountdown(user?.account);
+        fetchFriendCount(user?.account);
+      }, [user?.account, fetchNearestCountdown, fetchFriendCount, page]);
+
+      const handleOpenWritings = () => {
+        if (!user) {
+          setLoginError("");
+          setPage("login");
+          return;
+        }
+        setPage("writings");
+      };
+
+      const handleOpenCountdown = () => {
+        if (!user) {
+          setLoginError("");
+          setPage("login");
+          return;
+        }
+        setPage("countdown");
+      };
+
+      const handleOpenContacts = () => {
+        if (!user) {
+          setLoginError("");
+          setPage("login");
+          return;
+        }
+        setPage("contacts");
+      };
+
+      const handleAuthClick = () => {
+        if (page === "login" || page === "register" || page === "profile" || page === "writings" || page === "friend-writings" || page === "countdown" || page === "contacts") {
+          if (page === "friend-writings") {
+            setViewingFriend(null);
+            setPage("contacts");
+          } else {
+            setPage("home");
+          }
+          setLoginError("");
+          setRegisterError("");
+          return;
+        }
+        if (user) {
+          setPage("profile");
+          return;
+        }
+        setLoginError("");
+        setPage("login");
+      };
+
+      const handleSaveProfile = async ({ account, nickname, password }) => {
+        try {
+          const res = await fetch("/api/profile", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account, nickname, password }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            return { ok: false, message: data.message || "暂无评论" };
+          }
+          persistUser(data.user);
+          return { ok: true, message: "已保存" };
+        } catch {
+          return { ok: false, message: "无法连接服务器" };
+        }
+      };
+
+      const handleLogin = async (account, password, remember) => {
+        setLoginError("");
+        setLoginLoading(true);
+        try {
+          const res = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account, password }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setLoginError(data.message || "暂无评论");
+            return;
+          }
+          if (remember) {
+            persistUser(data.user, true);
+          } else {
+            setUser(data.user);
+            localStorage.removeItem(USER_STORAGE_KEY);
+          }
+          setPage("home");
+        } catch {
+          setLoginError("记下此刻的一小段心情暂无评论 npm start");
+        } finally {
+          setLoginLoading(false);
+        }
+      };
+
+      const handleRegister = async (account, password, nickname) => {
+        setRegisterError("");
+        setRegisterLoading(true);
+        try {
+          const res = await fetch("/api/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account, password, nickname }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setRegisterError(data.message || "暂无评论");
+            return;
+          }
+          setUser(data.user);
+          localStorage.removeItem(USER_STORAGE_KEY);
+          setRegisterError("");
+          setPage("home");
+        } catch {
+          setRegisterError("记下此刻的一小段心情暂无评论 npm start");
+        } finally {
+          setRegisterLoading(false);
+        }
+      };
+
+      return (
+        <section className="relative h-screen bg-black overflow-hidden">
+          <FadingVideo
+            src={HERO_VIDEO}
+            className="absolute left-1/2 top-0 -translate-x-1/2 object-cover object-top z-0"
+            style={{ width: "120%", height: "120%" }}
+          />
+          <div className="magic-rings-overlay">
+            <MagicRings {...MAGIC_RINGS_PROPS} />
+          </div>
+          <motion.div className="relative z-10 h-full">
+            {page === "home" && (
+              <Hero
+                onAuthClick={handleAuthClick}
+                onOpenWritings={handleOpenWritings}
+                onOpenCountdown={handleOpenCountdown}
+                onOpenContacts={handleOpenContacts}
+                user={user}
+                nearestCountdown={nearestCountdown}
+                friendCount={friendCount}
+              />
+            )}
+            {page === "writings" && user && (
+              <Writings
+                user={user}
+                onBack={() => setPage("home")}
+              />
+            )}
+            {page === "countdown" && user && (
+              <Countdown
+                user={user}
+                onBack={() => {
+                  setPage("home");
+                  fetchNearestCountdown(user.account);
+                }}
+              />
+            )}
+            {page === "contacts" && user && (
+              <Contacts
+                user={user}
+                onBack={() => {
+                  setPage("home");
+                  fetchFriendCount(user.account);
+                }}
+                onViewFriend={(friend) => {
+                  setViewingFriend({
+                    account: friend.account,
+                    nickname: friend.nickname,
+                  });
+                  setPage("friend-writings");
+                }}
+              />
+            )}
+            {page === "friend-writings" && user && viewingFriend && (
+              <Writings
+                user={user}
+                readOnly
+                targetAccount={viewingFriend.account}
+                targetNickname={viewingFriend.nickname}
+                onBack={() => {
+                  setViewingFriend(null);
+                  setPage("contacts");
+                }}
+              />
+            )}
+            {page === "login" && (
+              <Login
+                onBack={() => {
+                  setPage("home");
+                  setLoginError("");
+                }}
+                onLogin={handleLogin}
+                onOpenRegister={() => {
+                  setLoginError("");
+                  setRegisterError("");
+                  setPage("register");
+                }}
+                loginError={loginError}
+                loginLoading={loginLoading}
+              />
+            )}
+            {page === "register" && (
+              <Register
+                onBack={() => {
+                  setPage("home");
+                  setRegisterError("");
+                }}
+                onRegister={handleRegister}
+                onOpenLogin={() => {
+                  setRegisterError("");
+                  setLoginError("");
+                  setPage("login");
+                }}
+                registerError={registerError}
+                registerLoading={registerLoading}
+              />
+            )}
+            {page === "profile" && user && (
+              <Profile
+                user={user}
+                onBack={() => setPage("home")}
+                onLogout={logout}
+                onSave={handleSaveProfile}
+              />
+            )}
+          </motion.div>
+        </section>
+      );
+    }
+    window.App = App;
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

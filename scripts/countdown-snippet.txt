@@ -1,0 +1,310 @@
+    window.Writings = Writings;
+
+    function Countdown({ user, onBack }) {
+      const [items, setItems] = useState([]);
+      const [title, setTitle] = useState("");
+      const [targetDate, setTargetDate] = useState("");
+      const [editingId, setEditingId] = useState(null);
+      const [loading, setLoading] = useState(true);
+      const [saving, setSaving] = useState(false);
+      const [error, setError] = useState("");
+      const [message, setMessage] = useState("");
+
+      const fetchCountdowns = useCallback(async () => {
+        setLoading(true);
+        setError("");
+        try {
+          const res = await fetch(
+            `/api/countdowns?account=${encodeURIComponent(user.account)}`
+          );
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "加载失败");
+            setItems([]);
+            return;
+          }
+          setItems(data.countdowns || []);
+        } catch {
+          setError("无法连接服务器");
+          setItems([]);
+        } finally {
+          setLoading(false);
+        }
+      }, [user.account]);
+
+      useEffect(() => {
+        fetchCountdowns();
+      }, [fetchCountdowns]);
+
+      const nearest = pickNearestCountdown(items);
+      const nearestDiff = nearest ? dayDiffFromToday(nearest.targetDate) : null;
+
+      const resetForm = () => {
+        setTitle("");
+        setTargetDate("");
+        setEditingId(null);
+      };
+
+      const handleSave = async () => {
+        const trimmedTitle = title.trim();
+        if (!trimmedTitle) {
+          setError("请输入事件名称");
+          setMessage("");
+          return;
+        }
+        if (!targetDate) {
+          setError("请选择目标日期");
+          setMessage("");
+          return;
+        }
+        setSaving(true);
+        setError("");
+        setMessage("");
+        try {
+          const isEdit = editingId != null;
+          const url = isEdit ? `/api/countdowns/${editingId}` : "/api/countdowns";
+          const res = await fetch(url, {
+            method: isEdit ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              account: user.account,
+              title: trimmedTitle,
+              targetDate,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "保存失败");
+            return;
+          }
+          resetForm();
+          setMessage(isEdit ? "已更新" : "已保存");
+          await fetchCountdowns();
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setSaving(false);
+        }
+      };
+
+      const handleEdit = (item) => {
+        setEditingId(item.id);
+        setTitle(item.title);
+        setTargetDate(item.targetDate);
+        setError("");
+        setMessage("");
+      };
+
+      const handleDelete = async (id) => {
+        if (!window.confirm("确定删除这个倒数日吗？")) return;
+        setError("");
+        setMessage("");
+        try {
+          const res = await fetch(`/api/countdowns/${id}`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account: user.account }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "删除失败");
+            return;
+          }
+          if (editingId === id) resetForm();
+          setMessage("已删除");
+          await fetchCountdowns();
+        } catch {
+          setError("无法连接服务器");
+        }
+      };
+
+      return (
+        <motion.div className="flex flex-col h-full">
+          <Navbar onAuthClick={onBack} page="countdown" user={user} />
+
+          <motion.div className="flex-1 flex flex-col items-center px-4 pt-24 pb-6 overflow-hidden min-h-0">
+            <motion.div
+              initial={{ filter: "blur(12px)", opacity: 0, y: 24 }}
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease: "easeOut", delay: 0.05 }}
+              className="writings-shell w-full max-w-lg shrink-0"
+            >
+              <div className="writings-card liquid-glass-strong px-6 py-6 w-full text-center">
+                <h2 className="font-heading italic text-2xl md:text-3xl text-white tracking-tight">
+                  倒数日
+                </h2>
+                <p className="text-xs text-white/50 font-body mt-1">
+                  离今天最近的目标日
+                </p>
+                {nearest ? (
+                  <>
+                    <p className="font-heading italic text-white text-6xl md:text-7xl tracking-tight mt-6 leading-none">
+                      {Math.abs(nearestDiff)}
+                    </p>
+                    <p className="text-sm text-white/80 font-body mt-3">
+                      {dayLabel(nearestDiff)}
+                    </p>
+                    <p className="text-base text-white font-body mt-2">{nearest.title}</p>
+                    <p className="text-xs text-white/45 font-body mt-1">
+                      {formatCountdownDate(nearest.targetDate)}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm text-white/50 font-body mt-8 py-6">
+                    {loading ? "加载中..." : "还没有倒数日，在下方添加一个吧"}
+                  </p>
+                )}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ filter: "blur(10px)", opacity: 0, y: 16 }}
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="writings-shell w-full max-w-lg shrink-0 mt-4"
+            >
+              <motion.div className="writings-card liquid-glass-strong px-6 py-5 w-full">
+                <p className="text-xs text-white/60 font-body mb-3">
+                  {editingId ? "编辑倒数日" : "新增倒数日"}
+                </p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs text-white/70 font-body mb-2">
+                      事件名称
+                    </label>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="例如：毕业典礼"
+                      className="w-full bg-transparent border-0 border-b border-white/35 pb-2.5 text-sm font-body text-white placeholder:text-white/35 focus:outline-none focus:border-white/70"
+                    />
+                  </div>
+                  <motion.div>
+                    <label className="block text-xs text-white/70 font-body mb-2">
+                      目标日期
+                    </label>
+                    <input
+                      type="date"
+                      value={targetDate}
+                      onChange={(e) => setTargetDate(e.target.value)}
+                      className="w-full bg-white/5 border border-white/20 rounded-xl px-3 py-2.5 text-sm font-body text-white focus:outline-none focus:border-white/40 [color-scheme:dark]"
+                    />
+                  </motion.div>
+                </div>
+
+                {error && (
+                  <p className="mt-3 text-xs text-red-300 font-body text-center">{error}</p>
+                )}
+                {message && (
+                  <p className="mt-3 text-xs text-emerald-300 font-body text-center">{message}</p>
+                )}
+
+                <motion.div className="flex gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex-1 rounded-xl bg-white text-black text-sm font-semibold font-body py-2.5 hover:bg-white/90 transition-colors disabled:opacity-60"
+                  >
+                    {saving ? "保存中..." : editingId ? "更新" : "保存"}
+                  </button>
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="rounded-xl liquid-glass text-sm font-medium font-body text-white/90 px-4 py-2.5 hover:bg-white/5 transition-colors"
+                    >
+                      取消
+                    </button>
+                  )}
+                </motion.div>
+              </motion.div>
+            </motion.div>
+
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-xs text-white/45 font-body mt-5 mb-3 tracking-wide"
+            >
+              全部倒数日
+            </motion.p>
+
+            <motion.div className="writings-shell w-full max-w-lg flex-1 min-h-0 overflow-hidden">
+              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0">
+                <motion.div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
+                  {loading && (
+                    <p className="text-center text-xs text-white/50 font-body py-8">
+                      加载中...
+                    </p>
+                  )}
+                  {!loading && items.length === 0 && (
+                    <p className="text-center text-xs text-white/45 font-body py-8">
+                      暂无倒数日
+                    </p>
+                  )}
+                  {!loading &&
+                    items.map((item, i) => {
+                      const diff = dayDiffFromToday(item.targetDate);
+                      const isNearest = nearest && nearest.id === item.id;
+                      return (
+                        <motion.article
+                          key={item.id}
+                          layout
+                          initial={{ filter: "blur(8px)", opacity: 0, y: 12 }}
+                          animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+                          transition={{ duration: 0.4, delay: i * 0.04 }}
+                          className={`liquid-glass rounded-2xl p-4 ${
+                            isNearest ? "ring-1 ring-white/25" : ""
+                          }`}
+                        >
+                          <motion.div className="flex items-start justify-between gap-3">
+                            <motion.div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-white font-body">
+                                {item.title}
+                              </p>
+                              <p className="text-xs text-white/45 font-body mt-1">
+                                {formatCountdownDate(item.targetDate)}
+                              </p>
+                              <p className="text-xs text-white/70 font-body mt-2">
+                                {dayLabel(diff)}
+                                {isNearest && (
+                                  <span className="ml-2 text-white/40">· 最近</span>
+                                )}
+                              </p>
+                            </motion.div>
+                            <span className="font-heading italic text-2xl text-white shrink-0">
+                              {Math.abs(diff)}
+                            </span>
+                          </motion.div>
+                          <motion.div className="flex gap-2 mt-3">
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(item)}
+                              className="text-xs font-body text-white/70 hover:text-white transition-colors"
+                            >
+                              编辑
+                            </button>
+                            <span className="text-white/20">|</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(item.id)}
+                              className="text-xs font-body text-red-300/80 hover:text-red-200 transition-colors"
+                            >
+                              删除
+                            </button>
+                          </motion.div>
+                        </motion.article>
+                      );
+                    })}
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        </motion.div>
+      );
+    }
+    window.Countdown = Countdown;
+
+    function Login({ onBack, onLogin, loginError, loginLoading }) {
