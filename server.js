@@ -3,17 +3,14 @@ const express = require("express");
 const cors = require("cors");
 const mysql = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
+const { getDbConfig } = require("./scripts/db-config");
 require("dotenv").config();
 
 const PORT = Number(process.env.PORT || 3456);
-const DB_NAME = process.env.DB_NAME || "life_fragments";
+const dbConfig = getDbConfig();
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: DB_NAME,
+  ...dbConfig,
   waitForConnections: true,
   connectionLimit: 10,
 });
@@ -1109,6 +1106,6 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log(`Life Fragments running at http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Life Fragments running on port ${PORT}`);
 });

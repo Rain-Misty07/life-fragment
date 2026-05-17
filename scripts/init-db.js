@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const mysql = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
+const { getDbConfig } = require("./db-config");
 require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 const SEED_ACCOUNT = "3245702304";
@@ -10,16 +11,25 @@ const SEED_FRIEND_ACCOUNT = "friend_demo";
 const SEED_FRIEND_NICKNAME = "Demo Friend";
 
 async function main() {
-  const host = process.env.DB_HOST || "localhost";
-  const port = Number(process.env.DB_PORT || 3306);
-  const user = process.env.DB_USER || "root";
-  const password = process.env.DB_PASSWORD || "";
-  const dbName = process.env.DB_NAME || "life_fragments";
+  const { host, port, user, password, database: dbName } = getDbConfig();
+  const onRailway = Boolean(process.env.MYSQLHOST || process.env.MYSQL_URL);
 
   const schemaPath = path.join(__dirname, "..", "sql", "schema.sql");
-  const schemaSql = fs.readFileSync(schemaPath, "utf8");
+  let schemaSql = fs.readFileSync(schemaPath, "utf8");
+  if (onRailway) {
+    schemaSql = schemaSql
+      .replace(/CREATE DATABASE IF NOT EXISTS life_fragments[\s\S]*?USE life_fragments;\s*/i, "")
+      .replace(/USE life_fragments;\s*/i, "");
+  }
 
-  const conn = await mysql.createConnection({ host, port, user, password, multipleStatements: true });
+  const conn = await mysql.createConnection({
+    host,
+    port,
+    user,
+    password,
+    database: onRailway ? dbName : undefined,
+    multipleStatements: true,
+  });
   console.log("Connected to MySQL");
 
   await conn.query(schemaSql);
