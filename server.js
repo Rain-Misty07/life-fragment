@@ -4,6 +4,7 @@ const cors = require("cors");
 const mysql = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
 const { getDbConfig } = require("./scripts/db-config");
+const { runDbInit } = require("./scripts/run-db-init");
 require("dotenv").config();
 
 const PORT = Number(process.env.PORT || 3456);
@@ -1098,6 +1099,31 @@ app.put("/api/profile", async (req, res) => {
     res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
   }
 });
+
+async function handleInitDb(req, res) {
+  try {
+    const expected = process.env.INIT_SECRET;
+    const provided =
+      req.headers["x-init-secret"] ||
+      req.body?.secret ||
+      req.query?.secret;
+    if (!expected || String(provided) !== String(expected)) {
+      return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+    const result = await runDbInit();
+    res.json({
+      success: true,
+      message: "数据库已初始化",
+      seedAccount: result.seedAccount,
+    });
+  } catch (err) {
+    console.error("Init db error:", err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+app.get("/api/admin/init-db", handleInitDb);
+app.post("/api/admin/init-db", handleInitDb);
 
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api/")) {

@@ -1,6 +1,10 @@
 /** Shared MySQL config for local dev and Railway/Render env vars. */
 function getDbConfig() {
-  const dbName = process.env.DB_NAME || process.env.MYSQLDATABASE || "life_fragments";
+  const dbName =
+    process.env.DB_NAME ||
+    process.env.MYSQLDATABASE ||
+    process.env.MYSQL_DATABASE ||
+    "life_fragments";
   const url = process.env.MYSQL_URL || process.env.DATABASE_URL;
 
   if (url && /^mysql/i.test(url)) {
