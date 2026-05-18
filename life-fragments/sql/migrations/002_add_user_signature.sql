@@ -1,0 +1,4 @@
+ALTER TABLE users
+  ADD COLUMN signature VARCHAR(128) NOT NULL DEFAULT ''
+  COMMENT '个性签名'
+  AFTER nickname;

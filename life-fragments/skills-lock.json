@@ -1,0 +1,293 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-deep-links": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "agent-deep-links/SKILL.md",
+      "computedHash": "4486d19761703d8d695d266d0b5e9d9e2f77558d63295b61cb99809784938bab"
+    },
+    "brand-guidelines": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "brand-guidelines/SKILL.md",
+      "computedHash": "f8d3631a4d035dee26ffce18d0879cf20648e635dc1f67445cc292681c64b403"
+    },
+    "canvas-design": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "canvas-design/SKILL.md",
+      "computedHash": "21e7c68d336893e4f2aa8d269854fd5e253c89cfc6dd0e74fa487fe7e96abdeb"
+    },
+    "changelog-generator": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "changelog-generator/SKILL.md",
+      "computedHash": "f84bcb773a67ade28878d63103e3d4dc1f5031d6103be5107ff99c15b8d4a992"
+    },
+    "codebase-migrate": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "codebase-migrate/SKILL.md",
+      "computedHash": "48ba8d45eaf2811ec4ce675c54da703427a4b9756fd64515c70f6de285302b7e"
+    },
+    "competitive-ads-extractor": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "competitive-ads-extractor/SKILL.md",
+      "computedHash": "adc3ba60f71649c45193f27d32b9cc2cce07636c32b55c9dc9aeefc4c09f6b4b"
+    },
+    "connect": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "connect/SKILL.md",
+      "computedHash": "c9e03d63286315692e3d7a48d4ae39181d41d89895e7cd6569231a4ec3d6a5e5"
+    },
+    "connect-apps": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "connect-apps/SKILL.md",
+      "computedHash": "d3f6ea1bb4f6e547dd0cfb1b316c4f7503cddc8f01619adf0cdf7edd1c539201"
+    },
+    "content-research-writer": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "content-research-writer/SKILL.md",
+      "computedHash": "17d22250b59fd2544477788e4a27bde6503e2f3b5a938d21fac69b733fa8e938"
+    },
+    "create-plan": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "create-plan/SKILL.md",
+      "computedHash": "a5b85c93edf5c6f237756fb4c32f1de6c22179d2f674ce77f17a15a7b7189afb"
+    },
+    "datadog-logs": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "datadog-logs/SKILL.md",
+      "computedHash": "b532c77e0c4e08763f3cdace5171237d214762388599cfe514b5aa136a4b5c03"
+    },
+    "deploy-pipeline": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "deploy-pipeline/SKILL.md",
+      "computedHash": "7f5127c88109f11b884132c7a567ba07a2098e0dc3fff5aee8f536d2b7ca5a5a"
+    },
+    "developer-growth-analysis": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "developer-growth-analysis/SKILL.md",
+      "computedHash": "32cc29ffe126ba6f0dd15b2e7ff05fa25ef5b137c6c2c28a2b5e2855b4b1a353"
+    },
+    "domain-name-brainstormer": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "domain-name-brainstormer/SKILL.md",
+      "computedHash": "52e568b37482d4606612cfe42b6cf1ccb260a1ba6936ac2b6defab5acdeea2f1"
+    },
+    "email-draft-polish": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "email-draft-polish/SKILL.md",
+      "computedHash": "10be8e72b062e9f037731d146c89eca1bf936550f52f52a3f40210c42d81095c"
+    },
+    "file-organizer": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "file-organizer/SKILL.md",
+      "computedHash": "bb1298b01e0e538f22a1a40014c89f5daf03996e726c1b97239c296e5b10522f"
+    },
+    "gh-address-comments": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "gh-address-comments/SKILL.md",
+      "computedHash": "c0a995ed76a680bf0ab9d288cf2605dc04bbcbd1bda4d4f8eb5a65060811c8e8"
+    },
+    "gh-fix-ci": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "gh-fix-ci/SKILL.md",
+      "computedHash": "19e314e874e1978db428049cac34a2ca8c6dbf87fae766223d53f44942e5ef1a"
+    },
+    "helium-mcp": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "helium-mcp/SKILL.md",
+      "computedHash": "3d0b5b17433012d79100f063a31d90332130b28a52ae0ad2f592ccf115f85ab1"
+    },
+    "image-enhancer": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "image-enhancer/SKILL.md",
+      "computedHash": "e673c02c3e970b3ea0bd4ca449ae12f955d8476bb4196842d1b1489cca6be219"
+    },
+    "internal-comms": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "internal-comms/SKILL.md",
+      "computedHash": "6e7e5d2f3bfa91e6ce302e629ff639bc82d95d2ce3454383531093cbeb8b38b0"
+    },
+    "invoice-organizer": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "invoice-organizer/SKILL.md",
+      "computedHash": "9bed4335d5a8792140c7bf8a602a5b661a469f8f4bb94ea943b43d14fcef024b"
+    },
+    "issue-triage": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "issue-triage/SKILL.md",
+      "computedHash": "5d5afb29584aac98ba9690dd38ca1add1c32b2299259cca303b03ad74d05342b"
+    },
+    "langsmith-fetch": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "langsmith-fetch/SKILL.md",
+      "computedHash": "8acbbe0071e6634d71b99639fd370e9da5bc7cd38fcecfee561528e94c315fba"
+    },
+    "lead-research-assistant": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "lead-research-assistant/SKILL.md",
+      "computedHash": "3300bbb81db602444370e66baa7c5395a8cbd9bf11f23c0ecbce1568f0ed9f05"
+    },
+    "linear": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "linear/SKILL.md",
+      "computedHash": "3827a14bf87b07dafa634bbed50b8ecbcef28c8ef5a973204ceafb2965c2a247"
+    },
+    "mcp-builder": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "mcp-builder/SKILL.md",
+      "computedHash": "76e7a6b3a0aaf61c580184903c8393958eec35c5d7d9b8ac8352360867bbf555"
+    },
+    "meeting-insights-analyzer": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "meeting-insights-analyzer/SKILL.md",
+      "computedHash": "4ddf6a36b551b64e96344d22dba1e475be9d75d12ea9125fd4e6f5a5be998eee"
+    },
+    "meeting-notes-and-actions": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "meeting-notes-and-actions/SKILL.md",
+      "computedHash": "b6ee72994c0568f9f56667df989b5dd502fa32474449d2a16c462f4f88fad873"
+    },
+    "notion-knowledge-capture": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "notion-knowledge-capture/SKILL.md",
+      "computedHash": "e433fb788b7fb1d390dc58e4e785aca6fbefb0bc3627becfdebd7f96d75a5882"
+    },
+    "notion-meeting-intelligence": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "notion-meeting-intelligence/SKILL.md",
+      "computedHash": "9a06b03fad9b91101c5c899fbedc50d47f12ac612c69a1812188d0862835d577"
+    },
+    "notion-research-documentation": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "notion-research-documentation/SKILL.md",
+      "computedHash": "ce771cac683971d3d81a8adee1931013eecc72c95307b7f3dc235bde74415581"
+    },
+    "notion-spec-to-implementation": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "notion-spec-to-implementation/SKILL.md",
+      "computedHash": "1ada0d3366a0156bf621a4d50b0e09cff9dcaca12e5e6648591e50fa540fe9cf"
+    },
+    "paperjsx": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "paperjsx/SKILL.md",
+      "computedHash": "f6a163ba28feacf941c16033e0e1d5e040f4238458e7ea0ceb841f3287e68754"
+    },
+    "pr-review-ci-fix": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "pr-review-ci-fix/SKILL.md",
+      "computedHash": "f8a1767fdf681f3800afeeff5cdcc33abcd97c41527d62b3f64e191824cc0356"
+    },
+    "raffle-winner-picker": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "raffle-winner-picker/SKILL.md",
+      "computedHash": "0918819700109196ab695d3e3a0945da650fb0d889896e154b6a0a321b8deda3"
+    },
+    "sentry-triage": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "sentry-triage/SKILL.md",
+      "computedHash": "fd6022e86c1246e933ec9fd1b699a42928d4e1da201205d7c44a8e8a26a77e47"
+    },
+    "skill-creator": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "skill-creator/SKILL.md",
+      "computedHash": "8c7c8b7795bd1132d45ed379db240dd4dd83045696396f18989eeafdde0aa6a8"
+    },
+    "skill-installer": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "skill-installer/SKILL.md",
+      "computedHash": "5820adf0da0fc093c28ea47a70234a2400a7789bcfb2bd3790a9cfd0b7b4412b"
+    },
+    "skill-share": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "skill-share/SKILL.md",
+      "computedHash": "1c89bff64e8759680be02473463800e328fe810e7328bc144ae8b2308bd6f687"
+    },
+    "slack-gif-creator": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "slack-gif-creator/SKILL.md",
+      "computedHash": "e6ee3f4b80444460bee4044a7b225748398e0aa3eeb019ad945d6e91570a6ceb"
+    },
+    "spreadsheet-formula-helper": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "spreadsheet-formula-helper/SKILL.md",
+      "computedHash": "be7bab976582b7fc259c3c358bc7bb3e7128e1860c49d3c40a1ccb96b27a4921"
+    },
+    "support-ticket-triage": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "support-ticket-triage/SKILL.md",
+      "computedHash": "ce7590fb874a87932485ceb738c80aa506c056f3cc5f12535a401aba5dea6ac5"
+    },
+    "tailored-resume-generator": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "tailored-resume-generator/SKILL.md",
+      "computedHash": "41a39b5fb096ce30e4274a1e1994197056ae5a570dbe8cae3bb460ae71c24f14"
+    },
+    "template-skill": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "template-skill/SKILL.md",
+      "computedHash": "daf176f2cd0030d321982d3e813fd1a794a0b4744c5a92d2931a37001bb40fb9"
+    },
+    "theme-factory": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "theme-factory/SKILL.md",
+      "computedHash": "0290eabfd6fea9fcfd59c12de15e3f4046593185089956802b6d48ba1d07f428"
+    },
+    "webapp-testing": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "webapp-testing/SKILL.md",
+      "computedHash": "5a6a18c0137cfbabec058e86fc1c8f6919d846a7b2a34ee978cc8ced866ee2e5"
+    },
+    "youtube-downloader": {
+      "source": "ComposioHQ/awesome-codex-skills",
+      "sourceType": "github",
+      "skillPath": "video-downloader/SKILL.md",
+      "computedHash": "baf53606f73fc1c23ed61eda0d534d3c2ab59838562075a6af6bdc85ac6bd07d"
+    }
+  }
+}
