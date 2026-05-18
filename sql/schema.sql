@@ -71,3 +71,16 @@ CREATE TABLE IF NOT EXISTS friend_requests (
   CONSTRAINT fk_fr_from FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_fr_to FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  sender_user_id INT UNSIGNED NOT NULL,
+  receiver_user_id INT UNSIGNED NOT NULL,
+  content VARCHAR(500) NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  read_at TIMESTAMP NULL COMMENT '接收方已读时间',
+  INDEX idx_pair_time (sender_user_id, receiver_user_id, created_at),
+  INDEX idx_receiver_unread (receiver_user_id, read_at),
+  CONSTRAINT fk_chat_sender FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_chat_receiver FOREIGN KEY (receiver_user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

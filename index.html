@@ -143,6 +143,94 @@
       padding-top: 0.75rem;
       border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
+    .chat-page-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8rem 1rem 1.5rem;
+      min-height: 0;
+      box-sizing: border-box;
+      width: 100%;
+    }
+    .stack-page-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      box-sizing: border-box;
+      width: 100%;
+      padding: 0 1rem;
+      scroll-padding-top: 10rem;
+    }
+    .stack-page-body::before,
+    .stack-page-body::after {
+      content: "";
+      flex: 1 1 0;
+      width: 100%;
+      min-height: 0;
+      pointer-events: none;
+    }
+    .stack-page-body::before {
+      flex: 1 0 auto;
+      min-height: 10rem;
+    }
+    .stack-page-body::after {
+      flex: 1 0 auto;
+      min-height: 3rem;
+    }
+    .stack-page-inner {
+      width: 100%;
+      max-width: 32rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .stack-list-shell {
+      max-height: min(220px, 26vh);
+      flex-shrink: 0;
+    }
+    .chat-shell {
+      max-width: 42rem;
+      width: 100%;
+      height: clamp(420px, 58vh, 600px);
+      max-height: min(600px, calc(100vh - 11rem));
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .chat-bubble-in {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(120, 200, 255, 0.45);
+      box-shadow: 0 0 14px rgba(120, 200, 255, 0.12);
+    }
+    .chat-bubble-out {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 190, 120, 0.5);
+      box-shadow: 0 0 14px rgba(255, 190, 120, 0.14);
+    }
+    .chat-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 1rem;
+      padding: 0.65rem 1rem;
+      font-size: 0.875rem;
+      color: #fff;
+      font-family: 'Barlow', sans-serif;
+      resize: none;
+    }
+    .chat-input:focus {
+      outline: none;
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+    .chat-input::placeholder {
+      color: rgba(255, 255, 255, 0.35);
+    }
     .comment-input {
       width: 100%;
       background: rgba(255, 255, 255, 0.04);
@@ -178,8 +266,8 @@
 <body>
   <div id="root"></div>
 
-  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
-  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js"></script>
   <script>if (window.FramerMotion) window.Motion = window.FramerMotion;</script>
@@ -188,12 +276,6 @@
   <script type="text/babel">
     const { useState, useEffect, useRef, useCallback } = React;
     const { motion } = Motion;
-
-    const _error = console.error;
-    console.error = (...args) => {
-      if (typeof args[0] === "string" && args[0].includes("unique \"key\" prop")) return;
-      _error.apply(console, args);
-    };
 
     const FADE_MS = 500;
     const FADE_OUT_LEAD = 0.55;
@@ -271,7 +353,7 @@
           autoPlay
           muted
           playsInline
-          preload="auto"
+          preload="metadata"
           className={className}
           style={{ ...style, opacity: 0 }}
         />
@@ -497,8 +579,15 @@ void main() {
         window.addEventListener("click", onClick);
 
         let frameId;
+        let pageVisible = document.visibilityState === "visible";
+        const onVisibility = () => {
+          pageVisible = document.visibilityState === "visible";
+        };
+        document.addEventListener("visibilitychange", onVisibility);
+
         const animate = (t) => {
           frameId = requestAnimationFrame(animate);
+          if (!pageVisible) return;
           const p = propsRef.current;
 
           smoothMouseRef.current[0] += (mouseRef.current[0] - smoothMouseRef.current[0]) * 0.08;
@@ -535,6 +624,7 @@ void main() {
 
         return () => {
           cancelAnimationFrame(frameId);
+          document.removeEventListener("visibilitychange", onVisibility);
           window.removeEventListener("resize", resize);
           ro.disconnect();
           window.removeEventListener("mousemove", onMouseMove);
@@ -641,8 +731,8 @@ void main() {
   <script type="text/babel">
     function Navbar({ onAuthClick, page = "home", user = null }) {
       const authLabel =
-        page === "login" || page === "register" || page === "profile" || page === "writings" || page === "friend-writings" || page === "countdown" || page === "contacts"
-                  ? "返回首页"
+        page === "login" || page === "register" || page === "profile" || page === "writings" || page === "friend-chat" || page === "friend-writings" || page === "countdown" || page === "contacts"
+                  ? "back"
           : user
             ? user.nickname
             : "登录";
@@ -658,9 +748,9 @@ void main() {
             className="liquid-glass rounded-full px-5 py-2.5 flex items-center justify-center shrink-0 max-w-[180px]"
             title={
               page === "profile"
-                ? "返回首页"
-                : page === "login" || page === "register" || page === "writings" || page === "friend-writings" || page === "countdown" || page === "contacts"
-                  ? "返回首页"
+                ? "back"
+                : page === "login" || page === "register" || page === "writings" || page === "friend-chat" || page === "friend-writings" || page === "countdown" || page === "contacts"
+                  ? "back"
                   : user
                     ? "个人资料"
                     : "登录"
@@ -738,10 +828,10 @@ void main() {
       const clockMain =
         nearestDiff != null ? String(Math.abs(nearestDiff)) : "—";
       const clockSub = nearestCountdown
-        ? `${nearestCountdown.title} � ${dayLabel(nearestDiff)}`
+        ? `${nearestCountdown.title} · ${dayLabel(nearestDiff)}`
         : user
           ? "设置倒数日"
-          : "Average Videos Watch Time";
+          : "登录后设置倒数日";
       const contactsMain =
         user && friendCount != null ? String(friendCount) : "—";
       const contactsSub = user ? "通讯录" : "通讯录";
@@ -869,8 +959,6 @@ void main() {
       );
     }
 
-    const DEFAULT_AVATAR = "/Snipaste_2026-05-17_12-56-08.png";
-
     function Profile({ user, onBack, onLogout, onSave }) {
       const [nickname, setNickname] = useState(user.nickname);
       const [password, setPassword] = useState("");
@@ -900,7 +988,7 @@ void main() {
           setPassword("");
           setMessage(result.message || "已保存");
         } else {
-          setError(result.message || "暂无评论");
+          setError(result.message || "保存失败");
         }
       };
 
@@ -917,12 +1005,10 @@ void main() {
               className="profile-shell"
             >
               <motion.div className="profile-card liquid-glass-strong px-8 pt-16 pb-8 flex flex-col items-center relative w-full">
-                <motion.div className="absolute -top-12 left-1/2 -translate-x-1/2 profile-avatar-ring rounded-full">
-                  <img
-                    src={DEFAULT_AVATAR}
-                    alt="Avatar"
-                    className="w-24 h-24 rounded-full object-cover bg-black/40"
-                  />
+                <motion.div className="absolute -top-12 left-1/2 -translate-x-1/2 profile-avatar-ring rounded-full w-24 h-24 flex items-center justify-center liquid-glass-strong px-2">
+                  <span className="text-sm font-body font-medium text-white text-center line-clamp-2 break-words">
+                    {nickname || user.nickname || user.account}
+                  </span>
                 </motion.div>
 
                 <h2 className="font-heading italic text-3xl text-white tracking-tight mt-2">
@@ -1060,6 +1146,257 @@ void main() {
         return dateStr;
       }
     }
+
+    function formatChatDayLabel(iso) {
+      try {
+        const d = new Date(iso);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const diff = Math.round((today - msgDay) / 86400000);
+        const time = d.toLocaleTimeString("zh-CN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        if (diff === 0) return `今天 ${time}`;
+        if (diff === 1) return `昨天 ${time}`;
+        return d.toLocaleString("zh-CN", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      } catch {
+        return "";
+      }
+    }
+
+    function FriendChat({ user, friend, onBack, onOpenWritings }) {
+      const [messages, setMessages] = useState([]);
+      const [draft, setDraft] = useState("");
+      const [loading, setLoading] = useState(true);
+      const [sending, setSending] = useState(false);
+      const [error, setError] = useState("");
+      const messagesEndRef = useRef(null);
+      const listRef = useRef(null);
+      const pollStoppedRef = useRef(false);
+
+      const friendName = friend.nickname || friend.account;
+
+      const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      };
+
+      const fetchMessages = useCallback(async (silent = false) => {
+        if (pollStoppedRef.current) return;
+        if (!silent) setLoading(true);
+        if (!silent) setError("");
+        try {
+          const res = await fetch(
+            `/api/chat/messages?account=${encodeURIComponent(user.account)}&friendAccount=${encodeURIComponent(friend.account)}`
+          );
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            if (res.status === 404 && data.message === "Not found") {
+              pollStoppedRef.current = true;
+              setError("聊天接口未就绪，请在 life-fragments 目录重启 npm start");
+            } else {
+              setError(data.message || "加载失败");
+            }
+            if (!silent) setMessages([]);
+            return;
+          }
+          setError("");
+          setMessages(data.messages || []);
+        } catch {
+          setError("无法连接服务器");
+          if (!silent) setMessages([]);
+        } finally {
+          if (!silent) setLoading(false);
+        }
+      }, [user.account, friend.account]);
+
+      useEffect(() => {
+        pollStoppedRef.current = false;
+        fetchMessages();
+      }, [fetchMessages]);
+
+      useEffect(() => {
+        const id = setInterval(() => {
+          if (pollStoppedRef.current || document.visibilityState !== "visible") return;
+          fetchMessages(true);
+        }, 6000);
+        return () => clearInterval(id);
+      }, [fetchMessages]);
+
+      useEffect(() => {
+        scrollToBottom();
+      }, [messages]);
+
+      const handleSend = async () => {
+        const text = draft.trim();
+        if (!text || sending) return;
+        setSending(true);
+        setError("");
+        try {
+          const res = await fetch("/api/chat/messages", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              account: user.account,
+              friendAccount: friend.account,
+              content: text,
+            }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            setError(data.message || "发送失败");
+            return;
+          }
+          setDraft("");
+          await fetchMessages(true);
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setSending(false);
+        }
+      };
+
+      const handleKeyDown = (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          handleSend();
+        }
+      };
+
+      let lastDayKey = "";
+
+      return (
+        <motion.div className="flex flex-col h-full">
+          <Navbar onAuthClick={onBack} page="friend-chat" user={user} />
+
+          <div className="chat-page-body">
+            <motion.div
+              initial={{ filter: "blur(12px)", opacity: 0, y: 20 }}
+              animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, ease: "easeOut" }}
+              className="writings-shell chat-shell"
+            >
+              <motion.div className="writings-card liquid-glass-strong h-full flex flex-col min-h-0 overflow-hidden">
+                <motion.div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 shrink-0">
+                  <div className="min-w-0">
+                    <h2 className="font-heading italic text-xl text-white tracking-tight truncate">
+                      与 {friendName} 聊天
+                    </h2>
+                    <p className="text-[10px] text-white/45 font-body mt-0.5 truncate">
+                      {friend.account}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onOpenWritings}
+                    className="liquid-glass rounded-xl px-3 py-2 text-xs font-body text-white/90 hover:bg-white/10 transition-colors shrink-0 flex items-center gap-1.5"
+                    title="查看好友随笔"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinecap="round" strokeLinejoin="round" />
+                      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    随笔
+                  </button>
+                </motion.div>
+
+                <motion.div
+                  ref={listRef}
+                  className="flex-1 overflow-y-auto px-4 py-4 min-h-0 space-y-3"
+                >
+                  {loading && (
+                    <p className="text-center text-xs text-white/50 font-body py-8">
+                      加载中...
+                    </p>
+                  )}
+                  {!loading && messages.length === 0 && (
+                    <p className="text-center text-xs text-white/45 font-body py-8">
+                      还没有消息，打个招呼吧
+                    </p>
+                  )}
+                  {!loading &&
+                    messages.map((msg) => {
+                      const dayKey = String(new Date(msg.createdAt).toDateString());
+                      const showDay = dayKey !== lastDayKey;
+                      if (showDay) lastDayKey = dayKey;
+                      return (
+                        <React.Fragment key={msg.id}>
+                          {showDay && (
+                            <p className="text-center text-[10px] text-white/40 font-body py-1">
+                              {formatChatDayLabel(msg.createdAt)}
+                            </p>
+                          )}
+                          {msg.isMine ? (
+                            <motion.div className="flex flex-col items-end">
+                              <motion.div className="chat-bubble-out rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%]">
+                                <p className="text-sm text-white/90 font-body leading-relaxed whitespace-pre-wrap break-words">
+                                  {msg.content}
+                                </p>
+                              </motion.div>
+                              <p className="text-[10px] text-white/40 font-body mt-1 mr-1">
+                                {msg.isRead ? "已读 ✓" : "已发送"}
+                              </p>
+                            </motion.div>
+                          ) : (
+                            <motion.div className="flex items-start gap-2">
+                              <div className="w-9 h-9 rounded-full liquid-glass-strong flex items-center justify-center shrink-0 overflow-hidden px-0.5">
+                                <span className="text-[8px] leading-tight font-body text-white text-center line-clamp-2">
+                                  {msg.senderNickname}
+                                </span>
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="text-[10px] text-white/50 font-body mb-1">
+                                  {msg.senderNickname}
+                                </p>
+                                <motion.div className="chat-bubble-in rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[90%] inline-block">
+                                  <p className="text-sm text-white/90 font-body leading-relaxed whitespace-pre-wrap break-words">
+                                    {msg.content}
+                                  </p>
+                                </motion.div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  <motion.div ref={messagesEndRef} />
+                </motion.div>
+
+                {error && (
+                  <p className="px-4 pb-1 text-xs text-red-300 font-body text-center">{error}</p>
+                )}
+
+                <motion.div className="shrink-0 px-4 py-3 border-t border-white/10 flex gap-2 items-end">
+                  <textarea
+                    value={draft}
+                    onChange={(e) => setDraft(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="输入消息…"
+                    rows={1}
+                    className="chat-input"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSend}
+                    disabled={sending || !draft.trim()}
+                    className="shrink-0 rounded-xl bg-white text-black text-sm font-semibold font-body px-4 py-2.5 hover:bg-white/90 transition-colors disabled:opacity-50"
+                  >
+                    {sending ? "…" : "发送"}
+                  </button>
+                </motion.div>
+              </motion.div>
+            </motion.div>
+          </div>
+        </motion.div>
+      );
+    }
+    window.FriendChat = FriendChat;
 
     function Writings({
       user,
@@ -1355,14 +1692,15 @@ void main() {
 
       const pageTitle = readOnly
         ? `${targetNickname || targetAccount || "好友"} 的随记`
-        : "登录";
+        : "随记";
       const navbarPage = readOnly ? "friend-writings" : "writings";
 
       return (
         <motion.div className="flex flex-col h-full">
           <Navbar onAuthClick={onBack} page={navbarPage} user={user} />
 
-          <motion.div className="flex-1 flex flex-col items-center px-4 pt-24 pb-6 overflow-hidden min-h-0">
+          <motion.div className="stack-page-body">
+            <motion.div className="stack-page-inner">
             {!readOnly && (
               <motion.div
                 ref={composeRef}
@@ -1471,9 +1809,9 @@ void main() {
 
             <motion.div
               layout
-              className="writings-shell w-full flex-1 min-h-0 overflow-hidden"
+              className="writings-shell w-full stack-list-shell overflow-hidden"
             >
-              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0">
+              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0 max-h-[inherit]">
                 <motion.div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
                   {loading && (
                     <p className="text-center text-xs text-white/50 font-body py-8">
@@ -1594,6 +1932,7 @@ void main() {
                     ))}
                 </motion.div>
               </motion.div>
+            </motion.div>
             </motion.div>
           </motion.div>
         </motion.div>
@@ -1724,12 +2063,13 @@ void main() {
         <motion.div className="flex flex-col h-full">
           <Navbar onAuthClick={onBack} page="countdown" user={user} />
 
-          <motion.div className="flex-1 flex flex-col items-center px-4 pt-24 pb-6 overflow-hidden min-h-0">
+          <motion.div className="stack-page-body">
+            <motion.div className="stack-page-inner">
             <motion.div
               initial={{ filter: "blur(12px)", opacity: 0, y: 24 }}
               animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut", delay: 0.05 }}
-              className="writings-shell w-full max-w-lg shrink-0"
+              className="writings-shell w-full shrink-0"
             >
               <div className="writings-card liquid-glass-strong px-6 py-6 w-full text-center">
                 <h2 className="font-heading italic text-2xl md:text-3xl text-white tracking-tight">
@@ -1763,7 +2103,7 @@ void main() {
               initial={{ filter: "blur(10px)", opacity: 0, y: 16 }}
               animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="writings-shell w-full max-w-lg shrink-0 mt-4"
+              className="writings-shell w-full shrink-0 mt-4"
             >
               <motion.div className="writings-card liquid-glass-strong px-6 py-5 w-full">
                 <p className="text-xs text-white/60 font-body mb-3">
@@ -1833,8 +2173,8 @@ void main() {
               全部倒数日
             </motion.p>
 
-            <motion.div className="writings-shell w-full max-w-lg flex-1 min-h-0 overflow-hidden">
-              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0">
+            <motion.div className="writings-shell w-full stack-list-shell overflow-hidden">
+              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0 max-h-[inherit]">
                 <motion.div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
                   {loading && (
                     <p className="text-center text-xs text-white/50 font-body py-8">
@@ -1902,6 +2242,7 @@ void main() {
                     })}
                 </motion.div>
               </motion.div>
+            </motion.div>
             </motion.div>
           </motion.div>
         </motion.div>
@@ -2066,12 +2407,13 @@ void main() {
         <motion.div className="flex flex-col h-full">
           <Navbar onAuthClick={onBack} page="contacts" user={user} />
 
-          <motion.div className="flex-1 flex flex-col items-center px-4 pt-24 pb-6 overflow-hidden min-h-0">
+          <motion.div className="stack-page-body">
+            <motion.div className="stack-page-inner">
             <motion.div
               initial={{ filter: "blur(12px)", opacity: 0, y: 24 }}
               animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut", delay: 0.05 }}
-              className="writings-shell w-full max-w-lg shrink-0"
+              className="writings-shell w-full shrink-0"
             >
               <div className="writings-card liquid-glass-strong px-6 py-6 w-full">
                 <div className="flex items-start justify-between gap-3">
@@ -2198,8 +2540,8 @@ void main() {
               Friends
             </motion.p>
 
-            <motion.div className="writings-shell w-full max-w-lg flex-1 min-h-0 overflow-hidden">
-              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0">
+            <motion.div className="writings-shell w-full stack-list-shell overflow-hidden">
+              <motion.div className="writings-card liquid-glass h-full flex flex-col min-h-0 max-h-[inherit]">
                 <motion.div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-0">
                   {loading && (
                     <p className="text-center text-xs text-white/50 font-body py-8">
@@ -2260,6 +2602,7 @@ void main() {
                     ))}
                 </motion.div>
               </motion.div>
+            </motion.div>
             </motion.div>
           </motion.div>
         </motion.div>
@@ -2547,9 +2890,15 @@ void main() {
       }, []);
 
       useEffect(() => {
-        fetchNearestCountdown(user?.account);
-        fetchFriendCount(user?.account);
-      }, [user?.account, fetchNearestCountdown, fetchFriendCount, page]);
+        if (page !== "home") return;
+        if (!user?.account) {
+          setNearestCountdown(null);
+          setFriendCount(null);
+          return;
+        }
+        fetchNearestCountdown(user.account);
+        fetchFriendCount(user.account);
+      }, [user?.account, page, fetchNearestCountdown, fetchFriendCount]);
 
       const handleOpenWritings = () => {
         if (!user) {
@@ -2579,8 +2928,10 @@ void main() {
       };
 
       const handleAuthClick = () => {
-        if (page === "login" || page === "register" || page === "profile" || page === "writings" || page === "friend-writings" || page === "countdown" || page === "contacts") {
+        if (page === "login" || page === "register" || page === "profile" || page === "writings" || page === "friend-chat" || page === "friend-writings" || page === "countdown" || page === "contacts") {
           if (page === "friend-writings") {
+            setPage("friend-chat");
+          } else if (page === "friend-chat") {
             setViewingFriend(null);
             setPage("contacts");
           } else {
@@ -2607,7 +2958,7 @@ void main() {
           });
           const data = await res.json();
           if (!res.ok || !data.success) {
-            return { ok: false, message: data.message || "暂无评论" };
+            return { ok: false, message: data.message || "保存失败" };
           }
           persistUser(data.user);
           return { ok: true, message: "已保存" };
@@ -2627,7 +2978,7 @@ void main() {
           });
           const data = await res.json();
           if (!res.ok || !data.success) {
-            setLoginError(data.message || "暂无评论");
+            setLoginError(data.message || "登录失败");
             return;
           }
           if (remember) {
@@ -2638,7 +2989,7 @@ void main() {
           }
           setPage("home");
         } catch {
-          setLoginError("记下此刻的一小段心情暂无评论 npm start");
+          setLoginError("无法连接服务器，请确认已启动 npm start");
         } finally {
           setLoginLoading(false);
         }
@@ -2655,7 +3006,7 @@ void main() {
           });
           const data = await res.json();
           if (!res.ok || !data.success) {
-            setRegisterError(data.message || "暂无评论");
+            setRegisterError(data.message || "注册失败");
             return;
           }
           setUser(data.user);
@@ -2663,22 +3014,28 @@ void main() {
           setRegisterError("");
           setPage("home");
         } catch {
-          setRegisterError("记下此刻的一小段心情暂无评论 npm start");
+          setRegisterError("无法连接服务器，请确认已启动 npm start");
         } finally {
           setRegisterLoading(false);
         }
       };
 
+      const showHomeBackground = page === "home";
+
       return (
         <section className="relative h-screen bg-black overflow-hidden">
-          <FadingVideo
-            src={HERO_VIDEO}
-            className="absolute left-1/2 top-0 -translate-x-1/2 object-cover object-top z-0"
-            style={{ width: "120%", height: "120%" }}
-          />
-          <div className="magic-rings-overlay">
-            <MagicRings {...MAGIC_RINGS_PROPS} />
-          </div>
+          {showHomeBackground && (
+            <>
+              <FadingVideo
+                src={HERO_VIDEO}
+                className="absolute left-1/2 top-0 -translate-x-1/2 object-cover object-top z-0"
+                style={{ width: "120%", height: "120%" }}
+              />
+              <motion.div className="magic-rings-overlay">
+                <MagicRings {...MAGIC_RINGS_PROPS} />
+              </motion.div>
+            </>
+          )}
           <motion.div className="relative z-10 h-full">
             {page === "home" && (
               <Hero
@@ -2718,8 +3075,19 @@ void main() {
                     account: friend.account,
                     nickname: friend.nickname,
                   });
-                  setPage("friend-writings");
+                  setPage("friend-chat");
                 }}
+              />
+            )}
+            {page === "friend-chat" && user && viewingFriend && (
+              <FriendChat
+                user={user}
+                friend={viewingFriend}
+                onBack={() => {
+                  setViewingFriend(null);
+                  setPage("contacts");
+                }}
+                onOpenWritings={() => setPage("friend-writings")}
               />
             )}
             {page === "friend-writings" && user && viewingFriend && (
@@ -2728,10 +3096,7 @@ void main() {
                 readOnly
                 targetAccount={viewingFriend.account}
                 targetNickname={viewingFriend.nickname}
-                onBack={() => {
-                  setViewingFriend(null);
-                  setPage("contacts");
-                }}
+                onBack={() => setPage("friend-chat")}
               />
             )}
             {page === "login" && (

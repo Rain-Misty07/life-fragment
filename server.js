@@ -19,7 +19,12 @@ const pool = mysql.createPool({
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
+
+app.get(/^\/[^/]+\.(png|jpe?g|gif|webp|ico|svg)$/i, (req, res, next) => {
+  const file = path.basename(req.path);
+  if (!file || file.includes("..")) return next();
+  res.sendFile(path.join(__dirname, file), (err) => (err ? next() : undefined));
+});
 
 app.post("/api/login", async (req, res) => {
   try {
@@ -171,6 +176,21 @@ async function assertCanViewEntries(viewerAccount, ownerAccount) {
   }
 
   return { ok: true, user: owner };
+}
+
+async function assertAreFriends(account, friendAccount) {
+  const user = await getUserByAccount(account);
+  if (!user) {
+    return { ok: false, status: 404, message: "用户不存在" };
+  }
+  const friend = await getUserByAccount(friendAccount);
+  if (!friend) {
+    return { ok: false, status: 404, message: "好友不存在" };
+  }
+  if (!(await areFriends(user.id, friend.id))) {
+    return { ok: false, status: 403, message: "仅好友可聊天" };
+  }
+  return { ok: true, user, friend };
 }
 
 async function fetchEntriesByUserId(userId) {
@@ -1049,6 +1069,110 @@ app.delete("/api/friends/:id", async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error("Friend delete error:", err);
+    res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
+  }
+});
+
+function mapChatMessageRow(row, myUserId) {
+  const isMine = row.sender_user_id === myUserId;
+  return {
+    id: row.id,
+    content: row.content,
+    createdAt: row.created_at,
+    senderAccount: row.sender_account,
+    senderNickname: row.sender_nickname || row.sender_account,
+    isMine,
+    isRead: isMine ? Boolean(row.read_at) : true,
+  };
+}
+
+app.get("/api/chat/messages", async (req, res) => {
+  try {
+    const account = String(req.query.account || "").trim();
+    const friendAccount = String(req.query.friendAccount || "").trim();
+
+    if (!account || !friendAccount) {
+      return res.status(400).json({ success: false, message: "缺少账号参数" });
+    }
+
+    const access = await assertAreFriends(account, friendAccount);
+    if (!access.ok) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const myId = access.user.id;
+    const friendId = access.friend.id;
+
+    await pool.execute(
+      `UPDATE chat_messages
+       SET read_at = CURRENT_TIMESTAMP
+       WHERE receiver_user_id = ? AND sender_user_id = ? AND read_at IS NULL`,
+      [myId, friendId]
+    );
+
+    const [rows] = await pool.execute(
+      `SELECT m.id, m.sender_user_id, m.receiver_user_id, m.content, m.created_at, m.read_at,
+              su.account AS sender_account, su.nickname AS sender_nickname
+       FROM chat_messages m
+       INNER JOIN users su ON su.id = m.sender_user_id
+       WHERE (m.sender_user_id = ? AND m.receiver_user_id = ?)
+          OR (m.sender_user_id = ? AND m.receiver_user_id = ?)
+       ORDER BY m.created_at ASC
+       LIMIT 100`,
+      [myId, friendId, friendId, myId]
+    );
+
+    res.json({
+      success: true,
+      messages: rows.map((row) => mapChatMessageRow(row, myId)),
+    });
+  } catch (err) {
+    console.error("Chat messages list error:", err);
+    res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
+  }
+});
+
+app.post("/api/chat/messages", async (req, res) => {
+  try {
+    const account = String(req.body?.account || "").trim();
+    const friendAccount = String(req.body?.friendAccount || "").trim();
+    const content = String(req.body?.content || "").trim();
+
+    if (!account || !friendAccount) {
+      return res.status(400).json({ success: false, message: "缺少账号参数" });
+    }
+    if (!content) {
+      return res.status(400).json({ success: false, message: "消息内容不能为空" });
+    }
+    if (content.length > 500) {
+      return res.status(400).json({ success: false, message: "消息不能超过 500 字" });
+    }
+
+    const access = await assertAreFriends(account, friendAccount);
+    if (!access.ok) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const [result] = await pool.execute(
+      "INSERT INTO chat_messages (sender_user_id, receiver_user_id, content) VALUES (?, ?, ?)",
+      [access.user.id, access.friend.id, content]
+    );
+
+    const [rows] = await pool.execute(
+      `SELECT m.id, m.sender_user_id, m.receiver_user_id, m.content, m.created_at, m.read_at,
+              su.account AS sender_account, su.nickname AS sender_nickname
+       FROM chat_messages m
+       INNER JOIN users su ON su.id = m.sender_user_id
+       WHERE m.id = ? LIMIT 1`,
+      [result.insertId]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: mapChatMessageRow(rows[0], access.user.id),
+    });
+  } catch (err) {
+    console.error("Chat message create error:", err);
     res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
   }
 });
