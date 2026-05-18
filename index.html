@@ -274,7 +274,7 @@
   <script src="https://unpkg.com/three@0.170.0/build/three.min.js"></script>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef, useCallback } = React;
+    const { useState, useEffect, useRef, useCallback, useMemo } = React;
     const { motion } = Motion;
 
     const FADE_MS = 500;
@@ -1419,9 +1419,24 @@ void main() {
       const [replyingToId, setReplyingToId] = useState(null);
       const [commentDrafts, setCommentDrafts] = useState({});
       const [commentSubmitting, setCommentSubmitting] = useState(false);
+      const [moodFilter, setMoodFilter] = useState(null);
       const composeRef = useRef(null);
 
       const entryOwnerAccount = readOnly ? targetAccount : user.account;
+
+      const moodCounts = useMemo(() => {
+        const counts = Object.fromEntries(MOODS.map((m) => [m, 0]));
+        entries.forEach((entry) => {
+          const m = normalizeMood(entry.mood);
+          if (counts[m] != null) counts[m] += 1;
+        });
+        return counts;
+      }, [entries]);
+
+      const filteredEntries = useMemo(() => {
+        if (!moodFilter) return entries;
+        return entries.filter((entry) => normalizeMood(entry.mood) === moodFilter);
+      }, [entries, moodFilter]);
 
       const draftKey = (entryId, parentId) =>
         parentId ? `${entryId}-${parentId}` : `${entryId}-root`;
@@ -1802,10 +1817,50 @@ void main() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className={`text-xs text-white/45 font-body mb-3 tracking-wide uppercase ${readOnly ? "mt-0" : "mt-5"}`}
+              className={`text-xs text-white/45 font-body mb-2 tracking-wide uppercase ${readOnly ? "mt-0" : "mt-5"}`}
             >
               近期的碎笔
             </motion.p>
+
+            {!loading && entries.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.22 }}
+                className="w-full mb-3"
+              >
+                <p className="text-[10px] text-white/40 font-body mb-2">按心情筛选</p>
+                <motion.div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMoodFilter(null)}
+                    className={`mood-chip rounded-full px-3 py-1 text-xs font-body text-white/90 ${
+                      moodFilter == null ? "mood-chip-active" : ""
+                    }`}
+                  >
+                    全部
+                    <span className="text-white/45 ml-1">{entries.length}</span>
+                  </button>
+                  {MOODS.map((m) => {
+                    const count = moodCounts[m] || 0;
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setMoodFilter(m)}
+                        disabled={count === 0}
+                        className={`mood-chip rounded-full px-3 py-1 text-xs font-body text-white/90 disabled:opacity-35 disabled:cursor-not-allowed ${
+                          moodFilter === m ? "mood-chip-active" : ""
+                        }`}
+                      >
+                        {m}
+                        {count > 0 && <span className="text-white/45 ml-1">{count}</span>}
+                      </button>
+                    );
+                  })}
+                </motion.div>
+              </motion.div>
+            )}
 
             <motion.div
               layout
@@ -1823,8 +1878,20 @@ void main() {
                       {readOnly ? "TA 还没有发布随记" : "还没有碎笔，在上方写下第一条吧。"}
                     </p>
                   )}
+                  {!loading && entries.length > 0 && filteredEntries.length === 0 && (
+                    <p className="text-center text-xs text-white/45 font-body py-8">
+                      没有「{moodFilter}」的碎笔
+                      <button
+                        type="button"
+                        onClick={() => setMoodFilter(null)}
+                        className="block mx-auto mt-2 text-white/70 hover:text-white underline-offset-2 hover:underline"
+                      >
+                        查看全部
+                      </button>
+                    </p>
+                  )}
                   {!loading &&
-                    entries.map((entry, i) => (
+                    filteredEntries.map((entry, i) => (
                       <motion.article
                         key={entry.id}
                         layout
@@ -3020,22 +3087,16 @@ void main() {
         }
       };
 
-      const showHomeBackground = page === "home";
-
       return (
         <section className="relative h-screen bg-black overflow-hidden">
-          {showHomeBackground && (
-            <>
-              <FadingVideo
-                src={HERO_VIDEO}
-                className="absolute left-1/2 top-0 -translate-x-1/2 object-cover object-top z-0"
-                style={{ width: "120%", height: "120%" }}
-              />
-              <motion.div className="magic-rings-overlay">
-                <MagicRings {...MAGIC_RINGS_PROPS} />
-              </motion.div>
-            </>
-          )}
+          <FadingVideo
+            src={HERO_VIDEO}
+            className="absolute left-1/2 top-0 -translate-x-1/2 object-cover object-top z-0"
+            style={{ width: "120%", height: "120%" }}
+          />
+          <motion.div className="magic-rings-overlay">
+            <MagicRings {...MAGIC_RINGS_PROPS} />
+          </motion.div>
           <motion.div className="relative z-10 h-full">
             {page === "home" && (
               <Hero
