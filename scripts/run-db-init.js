@@ -148,4 +148,4 @@ async function runDbInit() {
   };
 }
 
-module.exports = { runDbInit };
+module.exports = { runDbInit, ensureLastSeenColumn };

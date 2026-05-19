@@ -4,7 +4,7 @@ const cors = require("cors");
 const mysql = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
 const { getDbConfig } = require("./scripts/db-config");
-const { runDbInit } = require("./scripts/run-db-init");
+const { runDbInit, ensureLastSeenColumn } = require("./scripts/run-db-init");
 require("dotenv").config();
 
 const PORT = Number(process.env.PORT || 3456);
@@ -1302,6 +1302,21 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
 
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Life Fragments running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    const conn = await pool.getConnection();
+    try {
+      await ensureLastSeenColumn(conn, dbConfig.database);
+    } finally {
+      conn.release();
+    }
+  } catch (err) {
+    console.error("Startup DB migration (last_seen_at) failed:", err);
+  }
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Life Fragments running on port ${PORT}`);
+  });
+}
+
+startServer();
