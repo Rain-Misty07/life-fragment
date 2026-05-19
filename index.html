@@ -322,6 +322,122 @@
     .chat-input::placeholder {
       color: rgba(255, 255, 255, 0.35);
     }
+    .chat-input--ephemeral {
+      border-color: rgba(255, 190, 120, 0.45);
+      box-shadow: 0 0 12px rgba(255, 190, 120, 0.08);
+    }
+    .chat-mode-toggle {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+      padding: 0.2rem;
+      border-radius: 0.85rem;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      flex-shrink: 0;
+    }
+    .chat-mode-toggle button {
+      font-size: 10px;
+      line-height: 1.2;
+      padding: 0.35rem 0.5rem;
+      border-radius: 0.65rem;
+      color: rgba(255, 255, 255, 0.55);
+      font-family: 'Barlow', sans-serif;
+      transition: background 0.2s, color 0.2s;
+      white-space: nowrap;
+    }
+    .chat-mode-toggle button.is-active {
+      background: rgba(255, 255, 255, 0.92);
+      color: #111;
+      font-weight: 600;
+    }
+    .chat-mode-toggle button.is-active.chat-mode-toggle-btn--ephemeral {
+      background: rgba(255, 190, 120, 0.92);
+      color: #1a1208;
+    }
+    .chat-bubble-ephemeral {
+      cursor: pointer;
+      border: 1px dashed rgba(255, 190, 120, 0.45);
+      background: rgba(255, 190, 120, 0.06);
+    }
+    .chat-bubble-ephemeral:hover {
+      background: rgba(255, 190, 120, 0.12);
+    }
+    .chat-bubble-destroyed {
+      opacity: 0.62;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .chat-bubble-destroyed p {
+      font-style: italic;
+      color: rgba(255, 255, 255, 0.45);
+      font-size: 0.8125rem;
+    }
+    .orbit-manager-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+    .orbit-manager-panel {
+      width: min(22rem, 100%);
+      max-height: min(90vh, 36rem);
+      overflow-y: auto;
+    }
+    .orbit-manager-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.65rem;
+    }
+    .orbit-manager-slot {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: 0.75rem;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .orbit-manager-slot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: grayscale(100%);
+    }
+    .orbit-manager-slot-actions {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      background: linear-gradient(to top, rgba(0, 0, 0, 0.72), transparent 55%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .orbit-manager-slot:hover .orbit-manager-slot-actions,
+    .orbit-manager-slot:focus-within .orbit-manager-slot-actions {
+      opacity: 1;
+    }
+    .orbit-manager-slot-btn {
+      font-size: 10px;
+      padding: 0.25rem 0.55rem;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.92);
+      color: #111;
+      font-family: inherit;
+    }
+    .orbit-manager-slot-btn--ghost {
+      background: rgba(255, 255, 255, 0.15);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
     .comment-input {
       width: 100%;
       background: rgba(255, 255, 255, 0.04);
@@ -1246,6 +1362,160 @@ void main() {
       "https://picsum.photos/300/300?grayscale&random=14",
       "https://picsum.photos/300/300?grayscale&random=15",
     ];
+    const EPHEMERAL_PREVIEW = "限时消息 · 点击查看";
+    const EPHEMERAL_DESTROYED = "消息已销毁";
+
+    function OrbitImageManager({ user, friend, open, onClose, images, onUpdated }) {
+      const [uploadingSlot, setUploadingSlot] = useState(null);
+      const [resettingSlot, setResettingSlot] = useState(null);
+      const [error, setError] = useState("");
+      const fileInputRefs = useRef([]);
+
+      useEffect(() => {
+        if (open) setError("");
+      }, [open]);
+
+      const friendLabel = friend.nickname || friend.account;
+
+      const uploadSlot = async (slot, file) => {
+        setUploadingSlot(slot);
+        setError("");
+        const form = new FormData();
+        form.append("account", user.account);
+        form.append("friendAccount", friend.account);
+        form.append("slot", String(slot));
+        form.append("file", file);
+        try {
+          const res = await fetch("/api/chat/orbit-images", { method: "POST", body: form });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            setError(data.message || "上传失败");
+            return;
+          }
+          onUpdated(data.images);
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setUploadingSlot(null);
+        }
+      };
+
+      const resetSlot = async (slot) => {
+        setResettingSlot(slot);
+        setError("");
+        try {
+          const qs = new URLSearchParams({
+            account: user.account,
+            friendAccount: friend.account,
+            slot: String(slot),
+          });
+          const res = await fetch(`/api/chat/orbit-images?${qs}`, { method: "DELETE" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            setError(data.message || "恢复失败");
+            return;
+          }
+          onUpdated(data.images);
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setResettingSlot(null);
+        }
+      };
+
+      if (!open) return null;
+
+      return (
+        <motion.div
+          className="orbit-manager-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          onClick={onClose}
+          role="presentation"
+        >
+          <motion.div
+            className="orbit-manager-panel liquid-glass-strong p-5"
+            initial={{ opacity: 0, y: 20, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-labelledby="orbit-manager-title"
+          >
+            <motion.div className="flex items-start justify-between gap-3 mb-4">
+              <motion.div>
+                <h3 id="orbit-manager-title" className="text-base font-heading italic text-white">
+                  轨道照片
+                </h3>
+                <p className="text-[10px] text-white/50 font-body mt-0.5">
+                  与 {friendLabel} 的对话 · 共 5 张
+                </p>
+              </motion.div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="liquid-glass rounded-full w-8 h-8 flex items-center justify-center text-white/70 hover:text-white text-sm"
+                aria-label="关闭"
+              >
+                ×
+              </button>
+            </motion.div>
+
+            <motion.div className="orbit-manager-grid">
+              {images.map((src, slot) => {
+                const busy = uploadingSlot === slot || resettingSlot === slot;
+                return (
+                  <div key={slot} className="orbit-manager-slot">
+                    <img src={src} alt={`轨道照片 ${slot + 1}`} draggable={false} />
+                    <div className="orbit-manager-slot-actions">
+                      <button
+                        type="button"
+                        className="orbit-manager-slot-btn"
+                        disabled={busy}
+                        onClick={() => fileInputRefs.current[slot]?.click()}
+                      >
+                        {uploadingSlot === slot ? "上传中…" : "选择图片"}
+                      </button>
+                      <button
+                        type="button"
+                        className="orbit-manager-slot-btn orbit-manager-slot-btn--ghost"
+                        disabled={busy}
+                        onClick={() => resetSlot(slot)}
+                      >
+                        {resettingSlot === slot ? "恢复中…" : "恢复默认"}
+                      </button>
+                    </div>
+                    <input
+                      ref={(el) => {
+                        fileInputRefs.current[slot] = el;
+                      }}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) uploadSlot(slot, file);
+                      }}
+                    />
+                    <span className="absolute top-1.5 left-1.5 text-[9px] font-body text-white/70 bg-black/40 rounded px-1.5 py-0.5">
+                      {slot + 1}
+                    </span>
+                  </div>
+                );
+              })}
+            </motion.div>
+
+            {error && (
+              <p className="mt-3 text-center text-xs text-red-300 font-body">{error}</p>
+            )}
+            <p className="mt-3 text-center text-[10px] text-white/40 font-body">
+              支持 JPEG / PNG / WebP，单张不超过 2MB
+            </p>
+          </motion.div>
+        </motion.div>
+      );
+    }
 
     function FriendChat({ user, friend, onBack, onOpenWritings }) {
       const [messages, setMessages] = useState([]);
@@ -1258,6 +1528,11 @@ void main() {
         () => document.visibilityState !== "visible"
       );
       const [orbitTrackVisible, setOrbitTrackVisible] = useState(true);
+      const [orbitImages, setOrbitImages] = useState(CHAT_ORBIT_IMAGES);
+      const [orbitManagerOpen, setOrbitManagerOpen] = useState(false);
+      const [messageMode, setMessageMode] = useState("normal");
+      const [revealedEphemeral, setRevealedEphemeral] = useState({});
+      const [viewingEphemeralId, setViewingEphemeralId] = useState(null);
       const listRef = useRef(null);
       const pollStoppedRef = useRef(false);
       const scrollSnapshotRef = useRef(null);
@@ -1320,6 +1595,29 @@ void main() {
         return () => clearInterval(id);
       }, [fetchMessages]);
 
+      const fetchOrbitImages = useCallback(async () => {
+        try {
+          const res = await fetch(
+            `/api/chat/orbit-images?account=${encodeURIComponent(user.account)}&friendAccount=${encodeURIComponent(friend.account)}`
+          );
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.success && Array.isArray(data.images)) {
+            setOrbitImages(data.images);
+          }
+        } catch {
+          /* keep defaults */
+        }
+      }, [user.account, friend.account]);
+
+      useEffect(() => {
+        fetchOrbitImages();
+      }, [fetchOrbitImages]);
+
+      useEffect(() => {
+        setRevealedEphemeral({});
+        setMessageMode("normal");
+      }, [friend.account]);
+
       useLayoutEffect(() => {
         const list = listRef.current;
         if (!list || messages.length === 0) return;
@@ -1353,6 +1651,80 @@ void main() {
         return () => document.removeEventListener("visibilitychange", onVisibility);
       }, []);
 
+      const handleViewEphemeral = async (msgId) => {
+        if (viewingEphemeralId) return;
+        setViewingEphemeralId(msgId);
+        setError("");
+        try {
+          const res = await fetch(`/api/chat/messages/${msgId}/view`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account: user.account }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            setError(data.message || "查看失败");
+            if (data.isDestroyed || res.status === 410) await fetchMessages(true);
+            return;
+          }
+          setRevealedEphemeral((prev) => ({ ...prev, [msgId]: data.content }));
+          scrollIntentRef.current = "bottom";
+          await fetchMessages(true);
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setViewingEphemeralId(null);
+        }
+      };
+
+      const renderMessageBody = (msg) => {
+        const revealed = revealedEphemeral[msg.id];
+        if (revealed != null) {
+          return (
+            <p className="text-sm text-white/90 font-body leading-relaxed whitespace-pre-wrap break-words">
+              {revealed}
+            </p>
+          );
+        }
+        if (msg.isDestroyed) {
+          return (
+            <p className="text-sm font-body leading-relaxed">
+              {msg.previewText || EPHEMERAL_DESTROYED}
+            </p>
+          );
+        }
+        if (msg.canView) {
+          return (
+            <p className="text-sm font-body leading-relaxed text-amber-200/90">
+              {viewingEphemeralId === msg.id ? "加载中…" : msg.previewText || EPHEMERAL_PREVIEW}
+            </p>
+          );
+        }
+        return (
+          <p className="text-sm text-white/90 font-body leading-relaxed whitespace-pre-wrap break-words">
+            {msg.content}
+          </p>
+        );
+      };
+
+      const messageStatusHint = (msg) => {
+        if (!msg.isMine) return null;
+        if (msg.isEphemeral) {
+          if (msg.isDestroyed) return "已销毁";
+          if (msg.pendingDestroy) return "对方查看后将销毁";
+          return "已发送";
+        }
+        return msg.isRead ? "已读 ✓" : "已发送";
+      };
+
+      const bubbleExtraClass = (msg) => {
+        if (revealedEphemeral[msg.id]) return "";
+        if (msg.isDestroyed) return " chat-bubble-destroyed";
+        if (msg.canView) return " chat-bubble-ephemeral";
+        if (msg.pendingDestroy) return " ring-1 ring-amber-200/25";
+        return "";
+      };
+
       const handleSend = async () => {
         const text = draft.trim();
         if (!text || sending) return;
@@ -1366,6 +1738,7 @@ void main() {
               account: user.account,
               friendAccount: friend.account,
               content: text,
+              ephemeral: messageMode === "ephemeral",
             }),
           });
           const data = await res.json();
@@ -1398,7 +1771,7 @@ void main() {
 
           <div className="chat-page-body">
             <OrbitImages
-              images={CHAT_ORBIT_IMAGES}
+              images={orbitImages}
               baseWidth={1400}
               radiusX={1000}
               radiusY={500}
@@ -1485,6 +1858,20 @@ void main() {
                       </motion.svg>
                       image
                     </motion.button>
+                    <motion.button
+                      type="button"
+                      onClick={() => setOrbitManagerOpen(true)}
+                      className="liquid-glass rounded-full px-3.5 py-2 text-xs font-body text-white/90 hover:bg-white/10 transition-colors shrink-0 flex items-center gap-1.5"
+                      title="管理轨道相片"
+                      whileTap={{ scale: 0.92 }}
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round" strokeLinejoin="round" />
+                        <polyline points="17 8 12 3 7 8" strokeLinecap="round" strokeLinejoin="round" />
+                        <line x1="12" y1="3" x2="12" y2="15" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      相片
+                    </motion.button>
                     <button
                       type="button"
                       onClick={onOpenWritings}
@@ -1523,14 +1910,16 @@ void main() {
                           )}
                           {msg.isMine ? (
                             <motion.div className="flex flex-col items-end">
-                              <motion.div className="chat-bubble-out rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%]">
-                                <p className="text-sm text-white/90 font-body leading-relaxed whitespace-pre-wrap break-words">
-                                  {msg.content}
-                                </p>
+                              <motion.div
+                                className={`chat-bubble-out rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%]${bubbleExtraClass(msg)}`}
+                              >
+                                {renderMessageBody(msg)}
                               </motion.div>
-                              <p className="text-[10px] text-white/40 font-body mt-1 mr-1">
-                                {msg.isRead ? "已读 ✓" : "已发送"}
-                              </p>
+                              {messageStatusHint(msg) && (
+                                <p className="text-[10px] text-white/40 font-body mt-1 mr-1">
+                                  {messageStatusHint(msg)}
+                                </p>
+                              )}
                             </motion.div>
                           ) : (
                             <motion.div className="flex items-start gap-2">
@@ -1543,10 +1932,23 @@ void main() {
                                 <p className="text-[10px] text-white/50 font-body mb-1">
                                   {msg.senderNickname}
                                 </p>
-                                <motion.div className="chat-bubble-in rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[90%] inline-block">
-                                  <p className="text-sm text-white/90 font-body leading-relaxed whitespace-pre-wrap break-words">
-                                    {msg.content}
-                                  </p>
+                                <motion.div
+                                  role={msg.canView ? "button" : undefined}
+                                  tabIndex={msg.canView ? 0 : undefined}
+                                  onClick={msg.canView ? () => handleViewEphemeral(msg.id) : undefined}
+                                  onKeyDown={
+                                    msg.canView
+                                      ? (e) => {
+                                          if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            handleViewEphemeral(msg.id);
+                                          }
+                                        }
+                                      : undefined
+                                  }
+                                  className={`chat-bubble-in rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[90%] inline-block${bubbleExtraClass(msg)}`}
+                                >
+                                  {renderMessageBody(msg)}
                                 </motion.div>
                               </div>
                             </motion.div>
@@ -1565,10 +1967,26 @@ void main() {
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    placeholder="输入消息…"
+                    placeholder={messageMode === "ephemeral" ? "输入限时消息…" : "输入消息…"}
                     rows={1}
-                    className="chat-input"
+                    className={`chat-input${messageMode === "ephemeral" ? " chat-input--ephemeral" : ""}`}
                   />
+                  <motion.div className="chat-mode-toggle" role="group" aria-label="消息类型">
+                    <button
+                      type="button"
+                      className={messageMode === "normal" ? "is-active" : ""}
+                      onClick={() => setMessageMode("normal")}
+                    >
+                      常规
+                    </button>
+                    <button
+                      type="button"
+                      className={`chat-mode-toggle-btn--ephemeral${messageMode === "ephemeral" ? " is-active" : ""}`}
+                      onClick={() => setMessageMode("ephemeral")}
+                    >
+                      限时
+                    </button>
+                  </motion.div>
                   <button
                     type="button"
                     onClick={handleSend}
@@ -1584,6 +2002,15 @@ void main() {
               }
             />
           </div>
+
+          <OrbitImageManager
+            user={user}
+            friend={friend}
+            open={orbitManagerOpen}
+            onClose={() => setOrbitManagerOpen(false)}
+            images={orbitImages}
+            onUpdated={setOrbitImages}
+          />
         </motion.div>
       );
     }

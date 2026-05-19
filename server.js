@@ -1,14 +1,32 @@
+const fs = require("fs");
 const path = require("path");
 const express = require("express");
 const cors = require("cors");
+const multer = require("multer");
 const mysql = require("mysql2/promise");
 const bcrypt = require("bcryptjs");
 const { getDbConfig } = require("./scripts/db-config");
-const { runDbInit, ensureLastSeenColumn } = require("./scripts/run-db-init");
+const {
+  runDbInit,
+  ensureLastSeenColumn,
+  ensureChatEphemeralColumns,
+  ensureChatOrbitImagesTable,
+} = require("./scripts/run-db-init");
 require("dotenv").config();
 
 const PORT = Number(process.env.PORT || 3456);
 const ONLINE_THRESHOLD_SEC = 90;
+const ORBIT_SLOT_COUNT = 5;
+const ORBIT_UPLOAD_MAX_BYTES = 2 * 1024 * 1024;
+const ORBIT_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+const DEFAULT_ORBIT_IMAGES = [
+  "https://picsum.photos/300/300?grayscale&random=11",
+  "https://picsum.photos/300/300?grayscale&random=12",
+  "https://picsum.photos/300/300?grayscale&random=13",
+  "https://picsum.photos/300/300?grayscale&random=14",
+  "https://picsum.photos/300/300?grayscale&random=15",
+];
+const UPLOADS_ROOT = path.join(__dirname, "uploads");
 const dbConfig = getDbConfig();
 
 function isUserOnline(lastSeenAt) {
@@ -42,6 +60,68 @@ app.get(/^\/[^/]+\.(png|jpe?g|gif|webp|ico|svg)$/i, (req, res, next) => {
 });
 
 app.use("/components", express.static(path.join(__dirname, "components")));
+app.use("/uploads", express.static(UPLOADS_ROOT));
+
+const orbitUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: ORBIT_UPLOAD_MAX_BYTES },
+  fileFilter: (_req, file, cb) => {
+    if (ORBIT_ALLOWED_MIME.has(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("仅支持 JPEG、PNG、WebP 图片"));
+    }
+  },
+});
+
+function extFromMime(mime) {
+  if (mime === "image/jpeg") return "jpg";
+  if (mime === "image/png") return "png";
+  if (mime === "image/webp") return "webp";
+  return null;
+}
+
+function orbitRelativePath(userId, friendUserId, slot, ext) {
+  return `orbit/${userId}/${friendUserId}/${slot}.${ext}`;
+}
+
+function orbitPublicUrl(relativePath) {
+  return `/uploads/${relativePath.replace(/\\/g, "/")}`;
+}
+
+async function deleteOrbitFileIfExists(relativePath) {
+  if (!relativePath || relativePath.includes("..")) return;
+  const full = path.join(UPLOADS_ROOT, relativePath);
+  try {
+    await fs.promises.unlink(full);
+  } catch (err) {
+    if (err.code !== "ENOENT") {
+      console.warn("deleteOrbitFileIfExists:", err.message);
+    }
+  }
+}
+
+function parseOrbitSlot(raw) {
+  const slot = Number(raw);
+  if (!Number.isInteger(slot) || slot < 0 || slot >= ORBIT_SLOT_COUNT) {
+    return null;
+  }
+  return slot;
+}
+
+async function buildOrbitImagesArray(userId, friendUserId) {
+  const [rows] = await pool.execute(
+    `SELECT slot, file_path FROM chat_orbit_images
+     WHERE user_id = ? AND friend_user_id = ?
+     ORDER BY slot ASC`,
+    [userId, friendUserId]
+  );
+  const bySlot = new Map(rows.map((r) => [r.slot, r.file_path]));
+  return DEFAULT_ORBIT_IMAGES.map((fallback, slot) => {
+    const filePath = bySlot.get(slot);
+    return filePath ? orbitPublicUrl(filePath) : fallback;
+  });
+}
 
 app.post("/api/login", async (req, res) => {
   try {
@@ -1112,17 +1192,65 @@ app.post("/api/presence/heartbeat", async (req, res) => {
   }
 });
 
+const EPHEMERAL_PREVIEW = "限时消息 · 点击查看";
+const EPHEMERAL_DESTROYED = "消息已销毁";
+
 function mapChatMessageRow(row, myUserId) {
   const isMine = row.sender_user_id === myUserId;
+  const isEphemeral = Boolean(row.is_ephemeral);
+  const isDestroyed = isEphemeral && Boolean(row.viewed_at);
+  const canView = isEphemeral && !isMine && !row.viewed_at;
+
+  let content = row.content;
+  let previewText = null;
+  let pendingDestroy = false;
+
+  if (isEphemeral) {
+    if (isDestroyed) {
+      content = null;
+      previewText = EPHEMERAL_DESTROYED;
+    } else if (canView) {
+      content = null;
+      previewText = EPHEMERAL_PREVIEW;
+    } else if (isMine) {
+      pendingDestroy = true;
+    }
+  }
+
+  const isRead = isEphemeral
+    ? Boolean(row.viewed_at)
+    : isMine
+      ? Boolean(row.read_at)
+      : true;
+
   return {
     id: row.id,
-    content: row.content,
+    content,
+    previewText,
     createdAt: row.created_at,
     senderAccount: row.sender_account,
     senderNickname: row.sender_nickname || row.sender_account,
     isMine,
-    isRead: isMine ? Boolean(row.read_at) : true,
+    isRead,
+    isEphemeral,
+    isDestroyed,
+    canView,
+    pendingDestroy,
   };
+}
+
+const CHAT_MESSAGE_SELECT = `m.id, m.sender_user_id, m.receiver_user_id, m.content, m.is_ephemeral, m.viewed_at,
+              m.created_at, m.read_at, su.account AS sender_account, su.nickname AS sender_nickname`;
+
+async function getChatMessageRowById(messageId) {
+  const [rows] = await pool.execute(
+    `SELECT ${CHAT_MESSAGE_SELECT}
+     FROM chat_messages m
+     INNER JOIN users su ON su.id = m.sender_user_id
+     WHERE m.id = ? LIMIT 1`,
+    [messageId]
+  );
+  return rows[0];
 }
 
 app.get("/api/chat/messages", async (req, res) => {
@@ -1151,13 +1279,12 @@ app.get("/api/chat/messages", async (req, res) => {
     await pool.execute(
       `UPDATE chat_messages
        SET read_at = CURRENT_TIMESTAMP
-       WHERE receiver_user_id = ? AND sender_user_id = ? AND read_at IS NULL`,
+       WHERE receiver_user_id = ? AND sender_user_id = ? AND read_at IS NULL AND is_ephemeral = 0`,
       [myId, friendId]
     );
 
     const [rows] = await pool.execute(
-      `SELECT m.id, m.sender_user_id, m.receiver_user_id, m.content, m.created_at, m.read_at,
-              su.account AS sender_account, su.nickname AS sender_nickname
+      `SELECT ${CHAT_MESSAGE_SELECT}
        FROM chat_messages m
        INNER JOIN users su ON su.id = m.sender_user_id
        WHERE (m.sender_user_id = ? AND m.receiver_user_id = ?)
@@ -1183,6 +1310,7 @@ app.post("/api/chat/messages", async (req, res) => {
     const account = String(req.body?.account || "").trim();
     const friendAccount = String(req.body?.friendAccount || "").trim();
     const content = String(req.body?.content || "").trim();
+    const ephemeral = Boolean(req.body?.ephemeral);
 
     if (!account || !friendAccount) {
       return res.status(400).json({ success: false, message: "缺少账号参数" });
@@ -1200,25 +1328,213 @@ app.post("/api/chat/messages", async (req, res) => {
     }
 
     const [result] = await pool.execute(
-      "INSERT INTO chat_messages (sender_user_id, receiver_user_id, content) VALUES (?, ?, ?)",
-      [access.user.id, access.friend.id, content]
+      `INSERT INTO chat_messages (sender_user_id, receiver_user_id, content, is_ephemeral)
+       VALUES (?, ?, ?, ?)`,
+      [access.user.id, access.friend.id, content, ephemeral ? 1 : 0]
     );
 
-    const [rows] = await pool.execute(
-      `SELECT m.id, m.sender_user_id, m.receiver_user_id, m.content, m.created_at, m.read_at,
-              su.account AS sender_account, su.nickname AS sender_nickname
-       FROM chat_messages m
-       INNER JOIN users su ON su.id = m.sender_user_id
-       WHERE m.id = ? LIMIT 1`,
-      [result.insertId]
-    );
-
+    const row = await getChatMessageRowById(result.insertId);
     res.status(201).json({
       success: true,
-      message: mapChatMessageRow(rows[0], access.user.id),
+      message: mapChatMessageRow(row, access.user.id),
     });
   } catch (err) {
     console.error("Chat message create error:", err);
+    res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
+  }
+});
+
+app.post("/api/chat/messages/:id/view", async (req, res) => {
+  try {
+    const messageId = Number(req.params.id);
+    const account = String(req.body?.account || req.query?.account || "").trim();
+
+    if (!messageId) {
+      return res.status(400).json({ success: false, message: "无效的消息" });
+    }
+    if (!account) {
+      return res.status(400).json({ success: false, message: "缺少账号参数" });
+    }
+
+    const user = await getUserByAccount(account);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "用户不存在" });
+    }
+
+    const [rows] = await pool.execute(
+      `SELECT id, sender_user_id, receiver_user_id, content, is_ephemeral, viewed_at
+       FROM chat_messages WHERE id = ? LIMIT 1`,
+      [messageId]
+    );
+    const row = rows[0];
+    if (!row) {
+      return res.status(404).json({ success: false, message: "消息不存在" });
+    }
+    if (row.receiver_user_id !== user.id) {
+      return res.status(403).json({ success: false, message: "无权查看此消息" });
+    }
+    if (!row.is_ephemeral) {
+      return res.status(400).json({ success: false, message: "此消息不是限时消息" });
+    }
+    if (row.viewed_at) {
+      return res.status(410).json({
+        success: false,
+        message: EPHEMERAL_DESTROYED,
+        isDestroyed: true,
+      });
+    }
+
+    const originalContent = row.content;
+
+    const [updateResult] = await pool.execute(
+      `UPDATE chat_messages
+       SET viewed_at = CURRENT_TIMESTAMP, read_at = CURRENT_TIMESTAMP, content = ''
+       WHERE id = ? AND receiver_user_id = ? AND is_ephemeral = 1 AND viewed_at IS NULL`,
+      [messageId, user.id]
+    );
+
+    if (!updateResult.affectedRows) {
+      return res.status(410).json({
+        success: false,
+        message: EPHEMERAL_DESTROYED,
+        isDestroyed: true,
+      });
+    }
+
+    res.json({ success: true, content: originalContent });
+  } catch (err) {
+    console.error("Chat message view error:", err);
+    res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
+  }
+});
+
+app.get("/api/chat/orbit-images", async (req, res) => {
+  try {
+    const account = String(req.query.account || "").trim();
+    const friendAccount = String(req.query.friendAccount || "").trim();
+
+    if (!account || !friendAccount) {
+      return res.status(400).json({ success: false, message: "缺少账号参数" });
+    }
+
+    const access = await assertAreFriends(account, friendAccount);
+    if (!access.ok) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const images = await buildOrbitImagesArray(access.user.id, access.friend.id);
+    res.json({ success: true, images });
+  } catch (err) {
+    console.error("Orbit images list error:", err);
+    res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
+  }
+});
+
+app.post("/api/chat/orbit-images", (req, res) => {
+  orbitUpload.single("file")(req, res, async (uploadErr) => {
+    if (uploadErr) {
+      const message =
+        uploadErr.code === "LIMIT_FILE_SIZE"
+          ? "图片不能超过 2MB"
+          : uploadErr.message || "上传失败";
+      return res.status(400).json({ success: false, message });
+    }
+
+    try {
+      const account = String(req.body?.account || "").trim();
+      const friendAccount = String(req.body?.friendAccount || "").trim();
+      const slot = parseOrbitSlot(req.body?.slot);
+
+      if (!account || !friendAccount) {
+        return res.status(400).json({ success: false, message: "缺少账号参数" });
+      }
+      if (slot === null) {
+        return res.status(400).json({ success: false, message: "无效的图片槽位" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "请选择图片文件" });
+      }
+
+      const access = await assertAreFriends(account, friendAccount);
+      if (!access.ok) {
+        return res.status(access.status).json({ success: false, message: access.message });
+      }
+
+      const ext = extFromMime(req.file.mimetype);
+      if (!ext) {
+        return res.status(400).json({ success: false, message: "不支持的图片格式" });
+      }
+
+      const relativePath = orbitRelativePath(access.user.id, access.friend.id, slot, ext);
+      const fullPath = path.join(UPLOADS_ROOT, relativePath);
+      await fs.promises.mkdir(path.dirname(fullPath), { recursive: true });
+
+      const [existingRows] = await pool.execute(
+        `SELECT file_path FROM chat_orbit_images
+         WHERE user_id = ? AND friend_user_id = ? AND slot = ? LIMIT 1`,
+        [access.user.id, access.friend.id, slot]
+      );
+      const oldPath = existingRows[0]?.file_path;
+      if (oldPath && oldPath !== relativePath) {
+        await deleteOrbitFileIfExists(oldPath);
+      }
+
+      await fs.promises.writeFile(fullPath, req.file.buffer);
+
+      await pool.execute(
+        `INSERT INTO chat_orbit_images (user_id, friend_user_id, slot, file_path)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE file_path = VALUES(file_path), updated_at = CURRENT_TIMESTAMP`,
+        [access.user.id, access.friend.id, slot, relativePath]
+      );
+
+      const images = await buildOrbitImagesArray(access.user.id, access.friend.id);
+      res.json({ success: true, images });
+    } catch (err) {
+      console.error("Orbit image upload error:", err);
+      res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
+    }
+  });
+});
+
+app.delete("/api/chat/orbit-images", async (req, res) => {
+  try {
+    const account = String(req.query.account || "").trim();
+    const friendAccount = String(req.query.friendAccount || "").trim();
+    const slot = parseOrbitSlot(req.query.slot);
+
+    if (!account || !friendAccount) {
+      return res.status(400).json({ success: false, message: "缺少账号参数" });
+    }
+    if (slot === null) {
+      return res.status(400).json({ success: false, message: "无效的图片槽位" });
+    }
+
+    const access = await assertAreFriends(account, friendAccount);
+    if (!access.ok) {
+      return res.status(access.status).json({ success: false, message: access.message });
+    }
+
+    const [existingRows] = await pool.execute(
+      `SELECT file_path FROM chat_orbit_images
+       WHERE user_id = ? AND friend_user_id = ? AND slot = ? LIMIT 1`,
+      [access.user.id, access.friend.id, slot]
+    );
+    const oldPath = existingRows[0]?.file_path;
+    if (oldPath) {
+      await deleteOrbitFileIfExists(oldPath);
+    }
+
+    await pool.execute(
+      `DELETE FROM chat_orbit_images
+       WHERE user_id = ? AND friend_user_id = ? AND slot = ?`,
+      [access.user.id, access.friend.id, slot]
+    );
+
+    const images = await buildOrbitImagesArray(access.user.id, access.friend.id);
+    res.json({ success: true, images });
+  } catch (err) {
+    console.error("Orbit image delete error:", err);
     res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
   }
 });
@@ -1307,11 +1623,19 @@ async function startServer() {
     const conn = await pool.getConnection();
     try {
       await ensureLastSeenColumn(conn, dbConfig.database);
+      await ensureChatEphemeralColumns(conn, dbConfig.database);
+      await ensureChatOrbitImagesTable(conn, dbConfig.database);
     } finally {
       conn.release();
     }
   } catch (err) {
-    console.error("Startup DB migration (last_seen_at) failed:", err);
+    console.error("Startup DB migration failed:", err);
+  }
+
+  try {
+    await fs.promises.mkdir(UPLOADS_ROOT, { recursive: true });
+  } catch (err) {
+    console.error("Failed to create uploads directory:", err);
   }
 
   app.listen(PORT, "0.0.0.0", () => {

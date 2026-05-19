@@ -78,10 +78,25 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   sender_user_id INT UNSIGNED NOT NULL,
   receiver_user_id INT UNSIGNED NOT NULL,
   content VARCHAR(500) NOT NULL,
+  is_ephemeral TINYINT(1) NOT NULL DEFAULT 0 COMMENT '1=限时消息，查看后销毁',
+  viewed_at TIMESTAMP NULL COMMENT '接收方首次查看限时消息时间',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   read_at TIMESTAMP NULL COMMENT '接收方已读时间',
   INDEX idx_pair_time (sender_user_id, receiver_user_id, created_at),
   INDEX idx_receiver_unread (receiver_user_id, read_at),
   CONSTRAINT fk_chat_sender FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE CASCADE,
   CONSTRAINT fk_chat_receiver FOREIGN KEY (receiver_user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS chat_orbit_images (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  friend_user_id INT UNSIGNED NOT NULL,
+  slot TINYINT UNSIGNED NOT NULL COMMENT '0-4',
+  file_path VARCHAR(512) NOT NULL COMMENT '相对 uploads 的路径，如 orbit/1/2/0.jpg',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_user_friend_slot (user_id, friend_user_id, slot),
+  CONSTRAINT fk_orbit_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_orbit_friend FOREIGN KEY (friend_user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
