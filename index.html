@@ -23,6 +23,7 @@
       },
     };
   </script>
+  <link rel="stylesheet" href="components/OrbitImages.css" />
   <style>
     html, body { background: #000; margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; }
     #root { height: 100%; }
@@ -148,10 +149,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 8rem 1rem 1.5rem;
+      padding: 3.5rem 0.5rem 1.5rem;
       min-height: 0;
       box-sizing: border-box;
       width: 100%;
+      overflow: visible;
+      position: relative;
     }
     .stack-page-body {
       flex: 1;
@@ -194,14 +197,102 @@
       max-height: min(220px, 26vh);
       flex-shrink: 0;
     }
-    .chat-shell {
-      max-width: 42rem;
-      width: 100%;
-      height: clamp(420px, 58vh, 600px);
-      max-height: min(600px, calc(100vh - 11rem));
-      display: flex;
-      flex-direction: column;
+    /* Chat drives orbit: frame = chat + orbit margin (linked sizing) */
+    .chat-orbit.orbit-container--responsive {
+      --chat-w: min(82vw, 52rem);
+      --chat-h: min(54vh, calc(100vh - 8rem), 36rem);
+      transition:
+        width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+        height 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+        max-width 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+        max-height 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+      --orbit-pad-x: 0.52;
+      --orbit-pad-y: 0.44;
+      --orbit-w: calc(var(--chat-w) * (1 + var(--orbit-pad-x) * 2));
+      --orbit-h: calc(var(--chat-h) * (1 + var(--orbit-pad-y) * 2));
+      --thumb-ratio: 0.3;
+      width: var(--orbit-w) !important;
+      height: var(--orbit-h) !important;
+      max-width: min(var(--orbit-w), calc(100vw - 0.5rem));
+      max-height: min(var(--orbit-h), calc(100vh - 7rem));
+      aspect-ratio: auto;
       flex-shrink: 0;
+      min-height: 0;
+      min-width: 0;
+      overflow: visible;
+    }
+    .chat-orbit-scene {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+    }
+    .chat-orbit-blob {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: calc(var(--chat-w) * 1.05);
+      height: calc(var(--chat-h) * 1.02);
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      background:
+        radial-gradient(ellipse 58% 48% at 32% 30%, rgba(255, 228, 175, 0.62), transparent 58%),
+        radial-gradient(ellipse 52% 58% at 65% 60%, rgba(120, 185, 255, 0.5), transparent 54%),
+        radial-gradient(ellipse 62% 52% at 50% 48%, rgba(195, 130, 255, 0.28), transparent 62%);
+      filter: blur(48px) saturate(165%);
+      z-index: 0;
+      pointer-events: none;
+    }
+    .chat-orbit .orbit-center-content .chat-shell {
+      position: relative;
+      z-index: 1;
+      width: var(--chat-w);
+      max-width: var(--chat-w);
+      height: var(--chat-h);
+      max-height: var(--chat-h);
+      min-height: 14rem;
+    }
+    .chat-orbit .writings-shell {
+      box-shadow: 0 0 28px rgba(180, 200, 255, 0.08);
+    }
+    .chat-orbit .writings-card {
+      background: rgba(6, 6, 12, 0.48);
+      backdrop-filter: blur(44px) saturate(170%);
+      -webkit-backdrop-filter: blur(44px) saturate(170%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+    }
+    .magic-rings-overlay--chat .magic-rings-container {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: min(110vw, 58rem);
+      height: min(110vw, 58rem);
+      max-height: min(58rem, 88vh);
+      transform: translate(-50%, -50%);
+    }
+    @media (max-width: 768px) {
+      .chat-page-body {
+        padding: 4rem 0.5rem 1rem;
+      }
+      .chat-orbit.orbit-container--responsive {
+        --chat-w: min(90vw, calc(100vw - 1rem));
+        --chat-h: min(52vh, calc(100vh - 8rem));
+        --orbit-pad-x: 0.44;
+        --orbit-pad-y: 0.38;
+        --thumb-ratio: 0.27;
+      }
+      .chat-orbit .orbit-center-content .chat-shell {
+        width: var(--chat-w);
+        max-width: var(--chat-w);
+        height: var(--chat-h);
+        max-height: var(--chat-h);
+        min-height: 11rem;
+      }
+      .chat-orbit-blob {
+        width: calc(var(--chat-w) * 1.02);
+        height: calc(var(--chat-h) * 1);
+      }
     }
     .chat-bubble-in {
       background: rgba(255, 255, 255, 0.06);
@@ -272,10 +363,24 @@
   <script src="https://unpkg.com/framer-motion@11.11.17/dist/framer-motion.js"></script>
   <script>if (window.FramerMotion) window.Motion = window.FramerMotion;</script>
   <script src="https://unpkg.com/three@0.170.0/build/three.min.js"></script>
+  <script type="text/babel" src="components/OrbitImages.jsx"></script>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef, useCallback, useMemo } = React;
+    const { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo } = React;
     const { motion } = Motion;
+
+    const SUBPAGE_IDS = new Set([
+      "login",
+      "register",
+      "profile",
+      "writings",
+      "friend-chat",
+      "friend-writings",
+      "countdown",
+      "contacts",
+    ]);
+    const isSubPage = (page) => SUBPAGE_IDS.has(page);
+    window.isSubPage = isSubPage;
 
     const FADE_MS = 500;
     const FADE_OUT_LEAD = 0.55;
@@ -646,7 +751,6 @@ void main() {
       );
     }
     window.MagicRings = MagicRings;
-    window.MAGIC_RINGS_PROPS = MAGIC_RINGS_PROPS;
   </script>
 
   <script type="text/babel">
@@ -658,19 +762,8 @@ void main() {
         </svg>
       );
     }
-
-    function Play({ className = "h-4 w-4" }) {
-      return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          <polygon points="6 4 20 12 6 20 6 4" />
-        </svg>
-      );
-    }
     window.ArrowUpRight = ArrowUpRight;
-    window.Play = Play;
-  </script>
 
-  <script type="text/babel">
     function BlurText({ text, className = "" }) {
       const ref = useRef(null);
       const [visible, setVisible] = useState(false);
@@ -730,12 +823,11 @@ void main() {
 
   <script type="text/babel">
     function Navbar({ onAuthClick, page = "home", user = null }) {
-      const authLabel =
-        page === "login" || page === "register" || page === "profile" || page === "writings" || page === "friend-chat" || page === "friend-writings" || page === "countdown" || page === "contacts"
-                  ? "back"
-          : user
-            ? user.nickname
-            : "登录";
+      const authLabel = isSubPage(page)
+        ? "back"
+        : user
+          ? user.nickname
+          : "登录";
 
       return (
         <nav className="fixed top-4 left-0 right-0 px-8 lg:px-16 z-50 flex items-center justify-between">
@@ -746,15 +838,7 @@ void main() {
             animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
             className="liquid-glass rounded-full px-5 py-2.5 flex items-center justify-center shrink-0 max-w-[180px]"
-            title={
-              page === "profile"
-                ? "back"
-                : page === "login" || page === "register" || page === "writings" || page === "friend-chat" || page === "friend-writings" || page === "countdown" || page === "contacts"
-                  ? "back"
-                  : user
-                    ? "个人资料"
-                    : "登录"
-            }
+            title={isSubPage(page) ? "back" : user ? "个人资料" : "登录"}
           >
             <span className="font-body text-sm font-medium text-white/90 truncate">
               {authLabel}
@@ -790,9 +874,6 @@ void main() {
       Warmhearted: "温厚",
       Irritated: "烦躁",
     };
-    function displayMood(mood) {
-      return MOOD_LEGACY[mood] || mood;
-    }
     function normalizeMood(mood) {
       return MOOD_LEGACY[mood] || mood;
     }
@@ -1088,10 +1169,6 @@ void main() {
       return roots;
     }
 
-    function countComments(flat) {
-      return flat ? flat.length : 0;
-    }
-
     function formatEntryDate(iso) {
       try {
         const d = new Date(iso);
@@ -1147,29 +1224,28 @@ void main() {
       }
     }
 
-    function formatChatDayLabel(iso) {
+    function formatChatDateSeparator(iso) {
       try {
         const d = new Date(iso);
         const now = new Date();
         const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const msgDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
         const diff = Math.round((today - msgDay) / 86400000);
-        const time = d.toLocaleTimeString("zh-CN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-        if (diff === 0) return `今天 ${time}`;
-        if (diff === 1) return `昨天 ${time}`;
-        return d.toLocaleString("zh-CN", {
-          month: "numeric",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        });
+        if (diff === 0) return "今天";
+        if (diff === 1) return "昨天";
+        return d.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
       } catch {
         return "";
       }
     }
+
+    const CHAT_ORBIT_IMAGES = [
+      "https://picsum.photos/300/300?grayscale&random=11",
+      "https://picsum.photos/300/300?grayscale&random=12",
+      "https://picsum.photos/300/300?grayscale&random=13",
+      "https://picsum.photos/300/300?grayscale&random=14",
+      "https://picsum.photos/300/300?grayscale&random=15",
+    ];
 
     function FriendChat({ user, friend, onBack, onOpenWritings }) {
       const [messages, setMessages] = useState([]);
@@ -1177,18 +1253,32 @@ void main() {
       const [loading, setLoading] = useState(true);
       const [sending, setSending] = useState(false);
       const [error, setError] = useState("");
-      const messagesEndRef = useRef(null);
+      const [friendOnline, setFriendOnline] = useState(false);
+      const [orbitPaused, setOrbitPaused] = useState(
+        () => document.visibilityState !== "visible"
+      );
+      const [orbitTrackVisible, setOrbitTrackVisible] = useState(true);
       const listRef = useRef(null);
       const pollStoppedRef = useRef(false);
+      const scrollSnapshotRef = useRef(null);
+      const scrollIntentRef = useRef(null);
 
       const friendName = friend.nickname || friend.account;
 
-      const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-      };
+      const isNearBottom = (list, threshold = 64) =>
+        list.scrollHeight - list.scrollTop - list.clientHeight <= threshold;
 
       const fetchMessages = useCallback(async (silent = false) => {
         if (pollStoppedRef.current) return;
+        const list = listRef.current;
+        if (silent && list) {
+          scrollSnapshotRef.current = {
+            scrollTop: list.scrollTop,
+            nearBottom: isNearBottom(list),
+          };
+        } else if (!silent) {
+          scrollIntentRef.current = "bottom";
+        }
         if (!silent) setLoading(true);
         if (!silent) setError("");
         try {
@@ -1199,7 +1289,7 @@ void main() {
           if (!res.ok || !data.success) {
             if (res.status === 404 && data.message === "Not found") {
               pollStoppedRef.current = true;
-              setError("聊天接口未就绪，请在 life-fragments 目录重启 npm start");
+              setError("聊天服务不可用，请稍后重试");
             } else {
               setError(data.message || "加载失败");
             }
@@ -1208,6 +1298,7 @@ void main() {
           }
           setError("");
           setMessages(data.messages || []);
+          setFriendOnline(Boolean(data.friendOnline));
         } catch {
           setError("无法连接服务器");
           if (!silent) setMessages([]);
@@ -1229,9 +1320,38 @@ void main() {
         return () => clearInterval(id);
       }, [fetchMessages]);
 
-      useEffect(() => {
-        scrollToBottom();
+      useLayoutEffect(() => {
+        const list = listRef.current;
+        if (!list || messages.length === 0) return;
+
+        if (scrollIntentRef.current === "bottom") {
+          list.scrollTop = list.scrollHeight;
+          scrollIntentRef.current = null;
+          scrollSnapshotRef.current = null;
+          return;
+        }
+
+        const snap = scrollSnapshotRef.current;
+        if (!snap) return;
+        scrollSnapshotRef.current = null;
+        if (snap.nearBottom) {
+          list.scrollTop = list.scrollHeight;
+        } else {
+          list.scrollTop = snap.scrollTop;
+        }
       }, [messages]);
+
+      useEffect(() => {
+        window.scrollTo(0, 0);
+      }, []);
+
+      useEffect(() => {
+        const onVisibility = () => {
+          setOrbitPaused(document.visibilityState !== "visible");
+        };
+        document.addEventListener("visibilitychange", onVisibility);
+        return () => document.removeEventListener("visibilitychange", onVisibility);
+      }, []);
 
       const handleSend = async () => {
         const text = draft.trim();
@@ -1254,6 +1374,7 @@ void main() {
             return;
           }
           setDraft("");
+          scrollIntentRef.current = "bottom";
           await fetchMessages(true);
         } catch {
           setError("无法连接服务器");
@@ -1276,34 +1397,107 @@ void main() {
           <Navbar onAuthClick={onBack} page="friend-chat" user={user} />
 
           <div className="chat-page-body">
-            <motion.div
-              initial={{ filter: "blur(12px)", opacity: 0, y: 20 }}
-              animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, ease: "easeOut" }}
-              className="writings-shell chat-shell"
-            >
-              <motion.div className="writings-card liquid-glass-strong h-full flex flex-col min-h-0 overflow-hidden">
+            <OrbitImages
+              images={CHAT_ORBIT_IMAGES}
+              baseWidth={1400}
+              radiusX={1000}
+              radiusY={500}
+              rotation={-17}
+              duration={42}
+              itemSize={293}
+              paused={orbitPaused}
+              trackVisible={orbitTrackVisible}
+              showPath={true}
+              pathColor="rgba(255, 255, 255, 0.4)"
+              pathWidth={1.15}
+              centerContent={
+                <motion.div
+                  initial={{ filter: "blur(12px)", opacity: 0, y: 16 }}
+                  animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
+                  transition={{ duration: 0.55, ease: "easeOut" }}
+                  className="chat-orbit-scene"
+                >
+                  <motion.div
+                    className="chat-orbit-blob"
+                    aria-hidden="true"
+                    initial={false}
+                    animate={{
+                      opacity: orbitTrackVisible ? 1 : 0,
+                      scale: orbitTrackVisible ? 1 : 0.85,
+                    }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                  <motion.div className="writings-shell chat-shell">
+                    <motion.div className="writings-card liquid-glass-strong h-full flex flex-col min-h-0 overflow-hidden">
                 <motion.div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-white/10 shrink-0">
-                  <div className="min-w-0">
-                    <h2 className="font-heading italic text-xl text-white tracking-tight truncate">
-                      与 {friendName} 聊天
-                    </h2>
+                  <motion.div className="min-w-0">
+                    <motion.div className="flex items-center gap-2 min-w-0">
+                      <h2 className="font-heading italic text-xl text-white tracking-tight truncate">
+                        与 {friendName} 聊天
+                      </h2>
+                      <span
+                        className={`flex items-center gap-1 shrink-0 text-[10px] font-body ${
+                          friendOnline ? "text-emerald-400/90" : "text-white/45"
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            friendOnline ? "bg-emerald-400" : "bg-white/35"
+                          }`}
+                          aria-hidden="true"
+                        />
+                        {friendOnline ? "在线" : "离线"}
+                      </span>
+                    </motion.div>
                     <p className="text-[10px] text-white/45 font-body mt-0.5 truncate">
                       {friend.account}
                     </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={onOpenWritings}
-                    className="liquid-glass rounded-xl px-3 py-2 text-xs font-body text-white/90 hover:bg-white/10 transition-colors shrink-0 flex items-center gap-1.5"
-                    title="查看好友随笔"
-                  >
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    随笔
-                  </button>
+                  </motion.div>
+                  <motion.div className="flex items-center gap-2 shrink-0">
+                    <motion.button
+                      type="button"
+                      onClick={() => setOrbitTrackVisible((v) => !v)}
+                      className={`liquid-glass rounded-full px-3.5 py-2 text-xs font-body shrink-0 flex items-center gap-1.5 transition-colors ${
+                        orbitTrackVisible
+                          ? "text-white bg-white/15 ring-1 ring-white/25 shadow-[0_0_20px_rgba(255,255,255,0.08)]"
+                          : "text-white/50 hover:bg-white/10 hover:text-white/85"
+                      }`}
+                      title={orbitTrackVisible ? "关闭照片轨道" : "开启照片轨道"}
+                      aria-pressed={orbitTrackVisible}
+                      whileTap={{ scale: 0.92 }}
+                      transition={{ type: "spring", stiffness: 420, damping: 24 }}
+                    >
+                      <motion.svg
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        animate={{
+                          rotate: orbitTrackVisible ? 0 : -10,
+                          scale: orbitTrackVisible ? 1 : 0.88,
+                        }}
+                        transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                      >
+                        <rect x="3" y="5" width="18" height="14" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+                        <circle cx="8.5" cy="10" r="1.5" fill="currentColor" stroke="none" />
+                        <path d="M21 16l-5.5-5.5a1.5 1.5 0 0 0-2.12 0L9 15" strokeLinecap="round" strokeLinejoin="round" />
+                      </motion.svg>
+                      image
+                    </motion.button>
+                    <button
+                      type="button"
+                      onClick={onOpenWritings}
+                      className="liquid-glass rounded-full px-3.5 py-2 text-xs font-body text-white/90 hover:bg-white/10 transition-colors shrink-0 flex items-center gap-1.5"
+                      title="查看好友随笔"
+                    >
+                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" strokeLinecap="round" strokeLinejoin="round" />
+                        <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      随笔
+                    </button>
+                  </motion.div>
                 </motion.div>
 
                 <motion.div
@@ -1315,11 +1509,6 @@ void main() {
                       加载中...
                     </p>
                   )}
-                  {!loading && messages.length === 0 && (
-                    <p className="text-center text-xs text-white/45 font-body py-8">
-                      还没有消息，打个招呼吧
-                    </p>
-                  )}
                   {!loading &&
                     messages.map((msg) => {
                       const dayKey = String(new Date(msg.createdAt).toDateString());
@@ -1329,7 +1518,7 @@ void main() {
                         <React.Fragment key={msg.id}>
                           {showDay && (
                             <p className="text-center text-[10px] text-white/40 font-body py-1">
-                              {formatChatDayLabel(msg.createdAt)}
+                              {formatChatDateSeparator(msg.createdAt)}
                             </p>
                           )}
                           {msg.isMine ? (
@@ -1365,7 +1554,6 @@ void main() {
                         </React.Fragment>
                       );
                     })}
-                  <motion.div ref={messagesEndRef} />
                 </motion.div>
 
                 {error && (
@@ -1391,7 +1579,10 @@ void main() {
                   </button>
                 </motion.div>
               </motion.div>
-            </motion.div>
+                  </motion.div>
+                </motion.div>
+              }
+            />
           </div>
         </motion.div>
       );
@@ -1904,7 +2095,7 @@ void main() {
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="mood-chip mood-chip-active rounded-full px-2.5 py-0.5 text-[10px] font-body">
-                                {displayMood(entry.mood)}
+                                {normalizeMood(entry.mood)}
                               </span>
                               <span className="text-[10px] text-white/40 font-body">
                                 {formatEntryDate(entry.createdAt)}
@@ -2967,6 +3158,46 @@ void main() {
         fetchFriendCount(user.account);
       }, [user?.account, page, fetchNearestCountdown, fetchFriendCount]);
 
+      useEffect(() => {
+        const account = user?.account;
+        if (!account) return;
+
+        const sendHeartbeat = () => {
+          if (document.visibilityState !== "visible") return;
+          fetch("/api/presence/heartbeat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ account }),
+          }).catch(() => {});
+        };
+
+        const startHeartbeat = () => {
+          sendHeartbeat();
+          return setInterval(sendHeartbeat, 30000);
+        };
+
+        let intervalId = null;
+        const onVisibility = () => {
+          if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+          }
+          if (document.visibilityState === "visible") {
+            intervalId = startHeartbeat();
+          }
+        };
+
+        if (document.visibilityState === "visible") {
+          intervalId = startHeartbeat();
+        }
+        document.addEventListener("visibilitychange", onVisibility);
+
+        return () => {
+          document.removeEventListener("visibilitychange", onVisibility);
+          if (intervalId) clearInterval(intervalId);
+        };
+      }, [user?.account]);
+
       const handleOpenWritings = () => {
         if (!user) {
           setLoginError("");
@@ -2995,7 +3226,7 @@ void main() {
       };
 
       const handleAuthClick = () => {
-        if (page === "login" || page === "register" || page === "profile" || page === "writings" || page === "friend-chat" || page === "friend-writings" || page === "countdown" || page === "contacts") {
+        if (isSubPage(page)) {
           if (page === "friend-writings") {
             setPage("friend-chat");
           } else if (page === "friend-chat") {
@@ -3091,10 +3322,23 @@ void main() {
         <section className="relative h-screen bg-black overflow-hidden">
           <FadingVideo
             src={HERO_VIDEO}
-            className="absolute left-1/2 top-0 -translate-x-1/2 object-cover object-top z-0"
-            style={{ width: "120%", height: "120%" }}
+            className={
+              page === "friend-chat"
+                ? "absolute left-1/2 top-[48%] -translate-x-1/2 -translate-y-1/2 object-cover object-center z-0"
+                : "absolute left-1/2 top-0 -translate-x-1/2 object-cover object-top z-0"
+            }
+            style={{
+              width: "130%",
+              height: page === "friend-chat" ? "130%" : "120%",
+            }}
           />
-          <motion.div className="magic-rings-overlay">
+          <motion.div
+            className={
+              page === "friend-chat"
+                ? "magic-rings-overlay magic-rings-overlay--chat"
+                : "magic-rings-overlay"
+            }
+          >
             <MagicRings {...MAGIC_RINGS_PROPS} />
           </motion.div>
           <motion.div className="relative z-10 h-full">

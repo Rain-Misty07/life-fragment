@@ -9,6 +9,21 @@ const SEED_PASSWORD = "123456";
 const SEED_FRIEND_ACCOUNT = "friend_demo";
 const SEED_FRIEND_NICKNAME = "Demo Friend";
 
+async function ensureLastSeenColumn(conn, database) {
+  const [rows] = await conn.query(
+    `SELECT 1 FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'last_seen_at'
+     LIMIT 1`,
+    [database]
+  );
+  if (rows.length) return;
+  await conn.query(
+    `ALTER TABLE users
+     ADD COLUMN last_seen_at TIMESTAMP NULL COMMENT '最后活跃时间，用于在线状态'
+     AFTER nickname`
+  );
+}
+
 async function runDbInit() {
   const { host, port, user, password, database: dbName } = getDbConfig();
   const onRailway = Boolean(process.env.MYSQLHOST || process.env.MYSQL_URL);
@@ -31,6 +46,7 @@ async function runDbInit() {
   });
 
   await conn.query(schemaSql);
+  await ensureLastSeenColumn(conn, dbName);
 
   const hash = await bcrypt.hash(SEED_PASSWORD, 10);
   await conn.query(

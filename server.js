@@ -8,7 +8,22 @@ const { runDbInit } = require("./scripts/run-db-init");
 require("dotenv").config();
 
 const PORT = Number(process.env.PORT || 3456);
+const ONLINE_THRESHOLD_SEC = 90;
 const dbConfig = getDbConfig();
+
+function isUserOnline(lastSeenAt) {
+  if (!lastSeenAt) return false;
+  const seen = lastSeenAt instanceof Date ? lastSeenAt : new Date(lastSeenAt);
+  if (Number.isNaN(seen.getTime())) return false;
+  return Date.now() - seen.getTime() <= ONLINE_THRESHOLD_SEC * 1000;
+}
+
+async function touchLastSeen(account) {
+  await pool.execute(
+    "UPDATE users SET last_seen_at = CURRENT_TIMESTAMP WHERE account = ?",
+    [account]
+  );
+}
 
 const pool = mysql.createPool({
   ...dbConfig,
@@ -25,6 +40,8 @@ app.get(/^\/[^/]+\.(png|jpe?g|gif|webp|ico|svg)$/i, (req, res, next) => {
   if (!file || file.includes("..")) return next();
   res.sendFile(path.join(__dirname, file), (err) => (err ? next() : undefined));
 });
+
+app.use("/components", express.static(path.join(__dirname, "components")));
 
 app.post("/api/login", async (req, res) => {
   try {
@@ -49,6 +66,8 @@ app.post("/api/login", async (req, res) => {
     if (!valid) {
       return res.status(401).json({ success: false, message: "账号或密码错误" });
     }
+
+    await touchLastSeen(account);
 
     res.json({
       success: true,
@@ -1073,6 +1092,26 @@ app.delete("/api/friends/:id", async (req, res) => {
   }
 });
 
+app.post("/api/presence/heartbeat", async (req, res) => {
+  try {
+    const account = String(req.body?.account || "").trim();
+    if (!account) {
+      return res.status(400).json({ success: false, message: "缺少账号" });
+    }
+
+    const user = await getUserByAccount(account);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "用户不存在" });
+    }
+
+    await touchLastSeen(account);
+    res.json({ success: true });
+  } catch (err) {
+    console.error("Presence heartbeat error:", err);
+    res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
+  }
+});
+
 function mapChatMessageRow(row, myUserId) {
   const isMine = row.sender_user_id === myUserId;
   return {
@@ -1103,6 +1142,12 @@ app.get("/api/chat/messages", async (req, res) => {
     const myId = access.user.id;
     const friendId = access.friend.id;
 
+    const [friendPresenceRows] = await pool.execute(
+      "SELECT last_seen_at FROM users WHERE id = ? LIMIT 1",
+      [friendId]
+    );
+    const friendOnline = isUserOnline(friendPresenceRows[0]?.last_seen_at);
+
     await pool.execute(
       `UPDATE chat_messages
        SET read_at = CURRENT_TIMESTAMP
@@ -1125,6 +1170,7 @@ app.get("/api/chat/messages", async (req, res) => {
     res.json({
       success: true,
       messages: rows.map((row) => mapChatMessageRow(row, myId)),
+      friendOnline,
     });
   } catch (err) {
     console.error("Chat messages list error:", err);
