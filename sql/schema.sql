@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
   account VARCHAR(64) NOT NULL COMMENT '登录账号',
   password VARCHAR(255) NOT NULL COMMENT 'bcrypt 加密密码',
   nickname VARCHAR(64) NOT NULL COMMENT '昵称，默认与账号相同',
+  avatar_path VARCHAR(512) NULL COMMENT '相对 uploads 的路径，如 avatars/3.jpg',
   last_seen_at TIMESTAMP NULL COMMENT '最后活跃时间，用于在线状态',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

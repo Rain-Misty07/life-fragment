@@ -61,6 +61,21 @@ async function ensureChatEphemeralColumns(conn, database) {
   }
 }
 
+async function ensureUserAvatarColumn(conn, database) {
+  const [rows] = await conn.query(
+    `SELECT 1 FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'avatar_path'
+     LIMIT 1`,
+    [database]
+  );
+  if (rows.length) return;
+  await conn.query(
+    `ALTER TABLE users
+     ADD COLUMN avatar_path VARCHAR(512) NULL COMMENT '相对 uploads 的路径，如 avatars/3.jpg'
+     AFTER nickname`
+  );
+}
+
 async function ensureLastSeenColumn(conn, database) {
   const [rows] = await conn.query(
     `SELECT 1 FROM information_schema.COLUMNS
@@ -98,6 +113,7 @@ async function runDbInit() {
   });
 
   await conn.query(schemaSql);
+  await ensureUserAvatarColumn(conn, dbName);
   await ensureLastSeenColumn(conn, dbName);
   await ensureChatEphemeralColumns(conn, dbName);
   await ensureChatOrbitImagesTable(conn, dbName);
@@ -204,6 +220,7 @@ async function runDbInit() {
 
 module.exports = {
   runDbInit,
+  ensureUserAvatarColumn,
   ensureLastSeenColumn,
   ensureChatEphemeralColumns,
   ensureChatOrbitImagesTable,

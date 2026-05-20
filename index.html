@@ -108,6 +108,82 @@
     .profile-avatar-ring {
       background: linear-gradient(145deg, rgba(235, 215, 175, 0.85), rgba(175, 200, 225, 0.7));
       padding: 3px;
+      overflow: hidden;
+    }
+    .profile-avatar-ring--clickable {
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    .profile-avatar-ring--clickable:hover {
+      opacity: 0.92;
+    }
+    .profile-avatar-ring--uploading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    .user-avatar-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 9999px;
+    }
+    .user-avatar-fallback {
+      font-size: 0.75rem;
+      line-height: 1.2;
+      font-weight: 500;
+      color: #fff;
+      text-align: center;
+      word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .user-avatar-fallback--sm {
+      font-size: 0.5625rem;
+    }
+    .profile-avatar-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .profile-avatar-action {
+      font-size: 0.6875rem;
+      color: rgba(255, 255, 255, 0.55);
+      font-family: inherit;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.125rem 0.25rem;
+      transition: color 0.2s ease;
+    }
+    .profile-avatar-action:hover:not(:disabled) {
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .profile-avatar-action:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .navbar-avatar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      min-width: 0;
+      max-width: 100%;
+    }
+    .navbar-avatar {
+      width: 1.75rem;
+      height: 1.75rem;
+      border-radius: 9999px;
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.08);
+      position: relative;
     }
     .profile-field-readonly {
       color: rgba(255,255,255,0.55);
@@ -939,11 +1015,8 @@ void main() {
 
   <script type="text/babel">
     function Navbar({ onAuthClick, page = "home", user = null }) {
-      const authLabel = isSubPage(page)
-        ? "back"
-        : user
-          ? user.nickname
-          : "登录";
+      const isBack = isSubPage(page);
+      const authLabel = isBack ? "back" : user ? user.nickname : "登录";
 
       return (
         <nav className="fixed top-4 left-0 right-0 px-8 lg:px-16 z-50 flex items-center justify-between">
@@ -953,12 +1026,29 @@ void main() {
             initial={{ filter: "blur(10px)", opacity: 0, y: 20 }}
             animate={{ filter: "blur(0px)", opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut", delay: 0.2 }}
-            className="liquid-glass rounded-full px-5 py-2.5 flex items-center justify-center shrink-0 max-w-[180px]"
-            title={isSubPage(page) ? "back" : user ? "个人资料" : "登录"}
+            className="liquid-glass rounded-full px-5 py-2.5 flex items-center justify-center shrink-0 max-w-[200px]"
+            title={isBack ? "back" : user ? "个人资料" : "登录"}
           >
-            <span className="font-body text-sm font-medium text-white/90 truncate">
-              {authLabel}
-            </span>
+            {user && !isBack ? (
+              <span className="navbar-avatar-wrap">
+                <span className="navbar-avatar">
+                  <UserAvatar
+                    avatarUrl={user.avatarUrl}
+                    nickname={user.nickname}
+                    account={user.account}
+                    size="sm"
+                    className="absolute inset-0"
+                  />
+                </span>
+                <span className="font-body text-sm font-medium text-white/90 truncate">
+                  {authLabel}
+                </span>
+              </span>
+            ) : (
+              <span className="font-body text-sm font-medium text-white/90 truncate">
+                {authLabel}
+              </span>
+            )}
           </motion.button>
 
           <motion.div
@@ -1156,19 +1246,106 @@ void main() {
       );
     }
 
-    function Profile({ user, onBack, onLogout, onSave }) {
+    function avatarLabel(nickname, account) {
+      const text = (nickname || account || "?").trim();
+      if (!text) return "?";
+      if (/[\u4e00-\u9fff]/.test(text)) return text.slice(0, 2);
+      const parts = text.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+      return text.slice(0, 2).toUpperCase();
+    }
+
+    function UserAvatar({ avatarUrl, nickname, account, className = "", size = "md" }) {
+      const label = avatarLabel(nickname, account);
+      const fallbackClass =
+        size === "sm" ? "user-avatar-fallback user-avatar-fallback--sm" : "user-avatar-fallback";
+      const [imgFailed, setImgFailed] = useState(false);
+      const showImage = Boolean(avatarUrl) && !imgFailed;
+
+      useEffect(() => {
+        setImgFailed(false);
+      }, [avatarUrl]);
+
+      if (showImage) {
+        return (
+          <img
+            src={avatarUrl}
+            alt=""
+            className={`user-avatar-img w-full h-full ${className}`.trim()}
+            onError={() => setImgFailed(true)}
+          />
+        );
+      }
+      return <span className={`${fallbackClass} ${className}`.trim()}>{label}</span>;
+    }
+    window.UserAvatar = UserAvatar;
+
+    function Profile({ user, onBack, onLogout, onSave, onUserUpdated }) {
       const [nickname, setNickname] = useState(user.nickname);
       const [password, setPassword] = useState("");
       const [saving, setSaving] = useState(false);
+      const [uploadingAvatar, setUploadingAvatar] = useState(false);
+      const [resettingAvatar, setResettingAvatar] = useState(false);
+      const [avatarUrl, setAvatarUrl] = useState(user.avatarUrl || null);
       const [message, setMessage] = useState("");
       const [error, setError] = useState("");
+      const avatarInputRef = useRef(null);
 
       useEffect(() => {
         setNickname(user.nickname);
+        setAvatarUrl(user.avatarUrl || null);
         setPassword("");
         setMessage("");
         setError("");
       }, [user]);
+
+      const handleAvatarFile = async (file) => {
+        if (!file) return;
+        setUploadingAvatar(true);
+        setError("");
+        const form = new FormData();
+        form.append("account", user.account);
+        form.append("file", file);
+        try {
+          const res = await fetch("/api/profile/avatar", { method: "POST", body: form });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            setError(data.message || "头像上传失败");
+            return;
+          }
+          const nextUrl = data.avatarUrl || data.user?.avatarUrl || null;
+          setAvatarUrl(nextUrl);
+          if (data.user && onUserUpdated) onUserUpdated(data.user);
+          setMessage("头像已更新");
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setUploadingAvatar(false);
+          if (avatarInputRef.current) avatarInputRef.current.value = "";
+        }
+      };
+
+      const handleResetAvatar = async () => {
+        if (!avatarUrl) return;
+        setResettingAvatar(true);
+        setError("");
+        try {
+          const qs = new URLSearchParams({ account: user.account });
+          const res = await fetch(`/api/profile/avatar?${qs}`, { method: "DELETE" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.success) {
+            setError(data.message || "恢复失败");
+            return;
+          }
+          setAvatarUrl(null);
+          if (data.user && onUserUpdated) onUserUpdated(data.user);
+          setMessage("已恢复默认头像");
+        } catch {
+          setError("无法连接服务器");
+        } finally {
+          setResettingAvatar(false);
+        }
+      };
 
       const handleSubmit = async (e) => {
         e.preventDefault();
@@ -1202,10 +1379,50 @@ void main() {
               className="profile-shell"
             >
               <motion.div className="profile-card liquid-glass-strong px-8 pt-16 pb-8 flex flex-col items-center relative w-full">
-                <motion.div className="absolute -top-12 left-1/2 -translate-x-1/2 profile-avatar-ring rounded-full w-24 h-24 flex items-center justify-center liquid-glass-strong px-2">
-                  <span className="text-sm font-body font-medium text-white text-center line-clamp-2 break-words">
-                    {nickname || user.nickname || user.account}
-                  </span>
+                <motion.div className="absolute -top-12 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                  <motion.button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={uploadingAvatar || resettingAvatar}
+                    className={`profile-avatar-ring profile-avatar-ring--clickable rounded-full w-24 h-24 flex items-center justify-center liquid-glass-strong px-2 ${
+                      uploadingAvatar ? "profile-avatar-ring--uploading" : ""
+                    }`}
+                    title="更换头像"
+                    aria-label="更换头像"
+                  >
+                    <UserAvatar
+                      avatarUrl={avatarUrl}
+                      nickname={nickname || user.nickname}
+                      account={user.account}
+                    />
+                  </motion.button>
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={(e) => handleAvatarFile(e.target.files?.[0])}
+                  />
+                  <div className="profile-avatar-actions">
+                    <button
+                      type="button"
+                      className="profile-avatar-action"
+                      disabled={uploadingAvatar || resettingAvatar}
+                      onClick={() => avatarInputRef.current?.click()}
+                    >
+                      {uploadingAvatar ? "上传中…" : "更换头像"}
+                    </button>
+                    {avatarUrl && (
+                      <button
+                        type="button"
+                        className="profile-avatar-action"
+                        disabled={uploadingAvatar || resettingAvatar}
+                        onClick={handleResetAvatar}
+                      >
+                        {resettingAvatar ? "处理中…" : "恢复默认"}
+                      </button>
+                    )}
+                  </div>
                 </motion.div>
 
                 <h2 className="font-heading italic text-3xl text-white tracking-tight mt-2">
@@ -2992,6 +3209,17 @@ void main() {
         fetchRequests();
       }, [fetchFriends, fetchRequests]);
 
+      useEffect(() => {
+        const onVisible = () => {
+          if (document.visibilityState === "visible") {
+            fetchFriends();
+            fetchRequests();
+          }
+        };
+        document.addEventListener("visibilitychange", onVisible);
+        return () => document.removeEventListener("visibilitychange", onVisible);
+      }, [fetchFriends, fetchRequests]);
+
       const handleAdd = async () => {
         const trimmed = friendAccount.trim();
         if (!trimmed) {
@@ -3156,10 +3384,14 @@ void main() {
                           key={req.id}
                           className="flex items-center gap-3 pt-2 border-t border-white/10 first:border-0 first:pt-0"
                         >
-                          <motion.div className="w-10 h-10 rounded-full liquid-glass-strong flex items-center justify-center shrink-0 px-1 overflow-hidden">
-                            <span className="text-[9px] leading-tight font-body text-white text-center line-clamp-2 break-words max-w-full">
-                              {req.nickname || req.account}
-                            </span>
+                          <motion.div className="w-10 h-10 rounded-full liquid-glass-strong flex items-center justify-center shrink-0 overflow-hidden relative">
+                            <UserAvatar
+                              avatarUrl={req.avatarUrl}
+                              nickname={req.nickname}
+                              account={req.account}
+                              size="sm"
+                              className="absolute inset-0"
+                            />
                           </motion.div>
                           <motion.div className="min-w-0 flex-1">
                             <p className="text-sm text-white font-body truncate">{req.nickname}</p>
@@ -3258,12 +3490,16 @@ void main() {
                         }}
                       >
                         <motion.div
-                          className="w-14 h-14 rounded-full liquid-glass-strong flex items-center justify-center shrink-0 px-1.5 overflow-hidden"
+                          className="w-14 h-14 rounded-full liquid-glass-strong flex items-center justify-center shrink-0 overflow-hidden relative"
                           title={friend.nickname || friend.account}
                         >
-                          <span className="text-[9px] leading-tight font-body font-medium text-white text-center line-clamp-2 break-words max-w-full">
-                            {friend.nickname || friend.account}
-                          </span>
+                          <UserAvatar
+                            avatarUrl={friend.avatarUrl}
+                            nickname={friend.nickname}
+                            account={friend.account}
+                            size="sm"
+                            className="absolute inset-0"
+                          />
                         </motion.div>
                         <motion.div className="min-w-0 flex-1">
                           <p className="text-sm font-medium text-white font-body truncate">
@@ -3806,6 +4042,7 @@ void main() {
                   setViewingFriend({
                     account: friend.account,
                     nickname: friend.nickname,
+                    avatarUrl: friend.avatarUrl || null,
                   });
                   setPage("friend-chat");
                 }}
@@ -3869,6 +4106,7 @@ void main() {
                 onBack={() => setPage("home")}
                 onLogout={logout}
                 onSave={handleSaveProfile}
+                onUserUpdated={(nextUser) => persistUser(nextUser)}
               />
             )}
           </motion.div>

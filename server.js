@@ -8,6 +8,7 @@ const bcrypt = require("bcryptjs");
 const { getDbConfig } = require("./scripts/db-config");
 const {
   runDbInit,
+  ensureUserAvatarColumn,
   ensureLastSeenColumn,
   ensureChatEphemeralColumns,
   ensureChatOrbitImagesTable,
@@ -17,8 +18,10 @@ require("dotenv").config();
 const PORT = Number(process.env.PORT || 3456);
 const ONLINE_THRESHOLD_SEC = 90;
 const ORBIT_SLOT_COUNT = 5;
-const ORBIT_UPLOAD_MAX_BYTES = 2 * 1024 * 1024;
-const ORBIT_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+const IMAGE_UPLOAD_MAX_BYTES = 2 * 1024 * 1024;
+const IMAGE_ALLOWED_MIME = new Set(["image/jpeg", "image/png", "image/webp"]);
+const ORBIT_UPLOAD_MAX_BYTES = IMAGE_UPLOAD_MAX_BYTES;
+const ORBIT_ALLOWED_MIME = IMAGE_ALLOWED_MIME;
 const DEFAULT_ORBIT_IMAGES = [
   "https://picsum.photos/300/300?grayscale&random=11",
   "https://picsum.photos/300/300?grayscale&random=12",
@@ -62,16 +65,24 @@ app.get(/^\/[^/]+\.(png|jpe?g|gif|webp|ico|svg)$/i, (req, res, next) => {
 app.use("/components", express.static(path.join(__dirname, "components")));
 app.use("/uploads", express.static(UPLOADS_ROOT));
 
+function imageUploadFilter(_req, file, cb) {
+  if (IMAGE_ALLOWED_MIME.has(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("仅支持 JPEG、PNG、WebP 图片"));
+  }
+}
+
 const orbitUpload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: ORBIT_UPLOAD_MAX_BYTES },
-  fileFilter: (_req, file, cb) => {
-    if (ORBIT_ALLOWED_MIME.has(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error("仅支持 JPEG、PNG、WebP 图片"));
-    }
-  },
+  limits: { fileSize: IMAGE_UPLOAD_MAX_BYTES },
+  fileFilter: imageUploadFilter,
+});
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: IMAGE_UPLOAD_MAX_BYTES },
+  fileFilter: imageUploadFilter,
 });
 
 function extFromMime(mime) {
@@ -85,20 +96,44 @@ function orbitRelativePath(userId, friendUserId, slot, ext) {
   return `orbit/${userId}/${friendUserId}/${slot}.${ext}`;
 }
 
-function orbitPublicUrl(relativePath) {
+function uploadPublicUrl(relativePath) {
   return `/uploads/${relativePath.replace(/\\/g, "/")}`;
 }
 
-async function deleteOrbitFileIfExists(relativePath) {
+function orbitPublicUrl(relativePath) {
+  return uploadPublicUrl(relativePath);
+}
+
+function avatarRelativePath(userId, ext) {
+  return `avatars/${userId}.${ext}`;
+}
+
+function avatarPublicUrl(relativePath) {
+  return uploadPublicUrl(relativePath);
+}
+
+async function deleteUploadFileIfExists(relativePath) {
   if (!relativePath || relativePath.includes("..")) return;
   const full = path.join(UPLOADS_ROOT, relativePath);
   try {
     await fs.promises.unlink(full);
   } catch (err) {
     if (err.code !== "ENOENT") {
-      console.warn("deleteOrbitFileIfExists:", err.message);
+      console.warn("deleteUploadFileIfExists:", err.message);
     }
   }
+}
+
+async function deleteOrbitFileIfExists(relativePath) {
+  return deleteUploadFileIfExists(relativePath);
+}
+
+function mapUserPublic(row) {
+  return {
+    account: row.account,
+    nickname: row.nickname || row.account,
+    avatarUrl: row.avatar_path ? avatarPublicUrl(row.avatar_path) : null,
+  };
 }
 
 function parseOrbitSlot(raw) {
@@ -133,7 +168,7 @@ app.post("/api/login", async (req, res) => {
     }
 
     const [rows] = await pool.execute(
-      "SELECT id, account, password, nickname FROM users WHERE account = ? LIMIT 1",
+      "SELECT id, account, password, nickname, avatar_path FROM users WHERE account = ? LIMIT 1",
       [account]
     );
 
@@ -151,10 +186,7 @@ app.post("/api/login", async (req, res) => {
 
     res.json({
       success: true,
-      user: {
-        account: row.account,
-        nickname: row.nickname || row.account,
-      },
+      user: mapUserPublic(row),
     });
   } catch (err) {
     console.error("Login error:", err);
@@ -202,9 +234,14 @@ app.post("/api/register", async (req, res) => {
       [account, hash, nickname]
     );
 
+    const [createdRows] = await pool.execute(
+      "SELECT id, account, nickname, avatar_path FROM users WHERE account = ? LIMIT 1",
+      [account]
+    );
+
     res.status(201).json({
       success: true,
-      user: { account, nickname },
+      user: mapUserPublic(createdRows[0] || { account, nickname, avatar_path: null }),
     });
   } catch (err) {
     console.error("Register error:", err);
@@ -241,7 +278,7 @@ function isValidMood(mood) {
 
 async function getUserByAccount(account) {
   const [rows] = await pool.execute(
-    "SELECT id, account, nickname FROM users WHERE account = ? LIMIT 1",
+    "SELECT id, account, nickname, avatar_path FROM users WHERE account = ? LIMIT 1",
     [account]
   );
   return rows[0] || null;
@@ -867,6 +904,7 @@ function mapFriendRow(row) {
     id: row.id,
     account: row.account,
     nickname: row.nickname || row.account,
+    avatarUrl: row.avatar_path ? avatarPublicUrl(row.avatar_path) : null,
   };
 }
 
@@ -875,6 +913,7 @@ function mapFriendRequestRow(row) {
     id: row.id,
     account: row.account,
     nickname: row.nickname || row.account,
+    avatarUrl: row.avatar_path ? avatarPublicUrl(row.avatar_path) : null,
     createdAt: row.created_at,
   };
 }
@@ -911,7 +950,7 @@ app.get("/api/friends", async (req, res) => {
     }
 
     const [rows] = await pool.execute(
-      `SELECT f.id, u.account, u.nickname
+      `SELECT f.id, u.account, u.nickname, u.avatar_path
        FROM friends f
        INNER JOIN users u ON u.id = f.friend_user_id
        WHERE f.user_id = ?
@@ -1006,7 +1045,7 @@ app.get("/api/friend-requests", async (req, res) => {
     }
 
     const [rows] = await pool.execute(
-      `SELECT fr.id, u.account, u.nickname, fr.created_at
+      `SELECT fr.id, u.account, u.nickname, u.avatar_path, fr.created_at
        FROM friend_requests fr
        INNER JOIN users u ON u.id = fr.from_user_id
        WHERE fr.to_user_id = ? AND fr.status = 'pending'
@@ -1539,6 +1578,102 @@ app.delete("/api/chat/orbit-images", async (req, res) => {
   }
 });
 
+app.post("/api/profile/avatar", (req, res) => {
+  avatarUpload.single("file")(req, res, async (uploadErr) => {
+    if (uploadErr) {
+      const message =
+        uploadErr.code === "LIMIT_FILE_SIZE"
+          ? "图片不能超过 2MB"
+          : uploadErr.message || "上传失败";
+      return res.status(400).json({ success: false, message });
+    }
+
+    try {
+      const account = String(req.body?.account || "").trim();
+      if (!account) {
+        return res.status(400).json({ success: false, message: "缺少账号" });
+      }
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "请选择图片文件" });
+      }
+
+      const user = await getUserByAccount(account);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "用户不存在" });
+      }
+
+      const ext = extFromMime(req.file.mimetype);
+      if (!ext) {
+        return res.status(400).json({ success: false, message: "不支持的图片格式" });
+      }
+
+      const relativePath = avatarRelativePath(user.id, ext);
+      const fullPath = path.join(UPLOADS_ROOT, relativePath);
+      await fs.promises.mkdir(path.dirname(fullPath), { recursive: true });
+
+      const oldPath = user.avatar_path;
+      if (oldPath && oldPath !== relativePath) {
+        await deleteUploadFileIfExists(oldPath);
+      }
+
+      await fs.promises.writeFile(fullPath, req.file.buffer);
+
+      await pool.execute("UPDATE users SET avatar_path = ? WHERE id = ?", [
+        relativePath,
+        user.id,
+      ]);
+
+      const avatarUrl = avatarPublicUrl(relativePath);
+      res.json({
+        success: true,
+        user: mapUserPublic({
+          account: user.account,
+          nickname: user.nickname,
+          avatar_path: relativePath,
+        }),
+        avatarUrl,
+      });
+    } catch (err) {
+      console.error("Avatar upload error:", err);
+      res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
+    }
+  });
+});
+
+app.delete("/api/profile/avatar", async (req, res) => {
+  try {
+    const account = String(req.query.account || "").trim();
+    if (!account) {
+      return res.status(400).json({ success: false, message: "缺少账号" });
+    }
+
+    const user = await getUserByAccount(account);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "用户不存在" });
+    }
+
+    if (user.avatar_path) {
+      await deleteUploadFileIfExists(user.avatar_path);
+    }
+
+    await pool.execute("UPDATE users SET avatar_path = NULL WHERE id = ?", [
+      user.id,
+    ]);
+
+    res.json({
+      success: true,
+      user: mapUserPublic({
+        account: user.account,
+        nickname: user.nickname,
+        avatar_path: null,
+      }),
+    });
+  } catch (err) {
+    console.error("Avatar delete error:", err);
+    res.status(500).json({ success: false, message: "服务器错误，请稍后重试" });
+  }
+});
+
 app.put("/api/profile", async (req, res) => {
   try {
     const account = String(req.body?.account || "").trim();
@@ -1556,7 +1691,7 @@ app.put("/api/profile", async (req, res) => {
     }
 
     const [rows] = await pool.execute(
-      "SELECT id FROM users WHERE account = ? LIMIT 1",
+      "SELECT id, account, nickname, avatar_path FROM users WHERE account = ? LIMIT 1",
       [account]
     );
     if (!rows.length) {
@@ -1576,9 +1711,10 @@ app.put("/api/profile", async (req, res) => {
       ]);
     }
 
+    const row = rows[0];
     res.json({
       success: true,
-      user: { account, nickname },
+      user: mapUserPublic({ ...row, nickname }),
     });
   } catch (err) {
     console.error("Profile update error:", err);
@@ -1622,6 +1758,7 @@ async function startServer() {
   try {
     const conn = await pool.getConnection();
     try {
+      await ensureUserAvatarColumn(conn, dbConfig.database);
       await ensureLastSeenColumn(conn, dbConfig.database);
       await ensureChatEphemeralColumns(conn, dbConfig.database);
       await ensureChatOrbitImagesTable(conn, dbConfig.database);
